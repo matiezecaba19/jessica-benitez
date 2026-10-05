@@ -107,6 +107,15 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
+    // Datos de cada cuenta: por ahora, hasta cuándo leyó las notificaciones.
+    match /usuarios/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['notificacionesLeidas'])
+        && request.resource.data.notificacionesLeidas == request.time;
+    }
+
     match /{documento=**} {
       allow read, write: if false;
     }

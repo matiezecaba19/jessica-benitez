@@ -28,6 +28,9 @@ Además:
 - Al ver todos los módulos, el alumno descarga su **certificado** (imprimible o en PDF).
 - Al terminar, puede dejar su **opinión**. Jessica decide desde el panel cuáles se muestran en la landing.
 - En el panel, Jessica busca alumnos, ve su avance y descarga las inscripciones en una planilla para Excel.
+- **Notificaciones** (campanita arriba): al alumno le avisa cuando le aprueban o rechazan el pago; a Jessica, cuando
+  alguien sube un comprobante o deja una opinión. Lo leído queda marcado en la cuenta.
+- En el editor de clases, **«Ver como alumno»** muestra el curso tal como lo ve un alumno, con los cambios sin guardar.
 
 Las clases se guardan en Firebase y **no** están en este repositorio: las reglas solo dejan leerlas
 a quien tiene la inscripción aprobada. Jessica las carga y las edita desde el panel

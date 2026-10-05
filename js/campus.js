@@ -188,6 +188,10 @@ const estado = {
   todas: [],
   busqueda: "",
   opiniones: [],
+  previa: false,             // Jessica viendo un curso "como alumno"
+  leidasHasta: 0,            // segundos: hasta cuándo leyó las notificaciones
+  notifAbiertas: false,
+  resaltadas: new Set(),
   cursoPendiente: params.get("curso"),
 };
 let cortarInscripciones = null;
@@ -199,18 +203,34 @@ onAuthStateChanged(auth, (usuario) => {
   if (cortarInscripciones) { cortarInscripciones(); cortarInscripciones = null; }
   if (cortarPanel) { cortarPanel(); cortarPanel = null; }
   if (cortarOpiniones) { cortarOpiniones(); cortarOpiniones = null; }
+  if (cortarLeidas) { cortarLeidas(); cortarLeidas = null; }
   estado.inscripciones = [];
+  estado.todas = [];
+  estado.opiniones = [];
   estado.vista = "inicio";
+  estado.previa = false;
+  estado.notifAbiertas = false;
+  avisadas = null;
+  cargado = { leidas: false, inscripciones: false, admin: !estado.admin };
   pintarBarra();
   if (!usuario) {
     pintarIngreso();
     return;
   }
+  cortarLeidas = onSnapshot(doc(db, "usuarios", usuario.uid), (snap) => {
+    const datos = snap.exists() ? snap.data({ serverTimestamps: "estimate" }) : {};
+    estado.leidasHasta = datos.notificacionesLeidas ? datos.notificacionesLeidas.seconds : 0;
+    cargado.leidas = true;
+    actualizarNotificaciones();
+  }, () => { cargado.leidas = true; });
+  if (estado.admin) escucharAdmin();
   const q = query(collection(db, "inscripciones"), where("uid", "==", usuario.uid));
   let primera = true;
   cortarInscripciones = onSnapshot(q, (snap) => {
     estado.inscripciones = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    cargado.inscripciones = true;
     if (estado.vista === "inicio") pintarInicio();
+    actualizarNotificaciones();
     if (primera) {
       primera = false;
       const pedido = estado.cursoPendiente && cursoPorId(estado.cursoPendiente);
@@ -234,19 +254,151 @@ function pintarBarra() {
   barra.innerHTML = `
     ${estado.admin ? `
       <nav class="campus__pestanas" aria-label="Secciones del campus">
-        <button type="button" data-ir="inicio" ${estado.vista !== "panel" ? 'aria-current="page"' : ""}>Mis cursos</button>
-        <button type="button" data-ir="panel" ${estado.vista === "panel" ? 'aria-current="page"' : ""}>Panel de Jessica</button>
+        <button type="button" data-ir="inicio" ${estado.vista !== "panel" && !estado.previa ? 'aria-current="page"' : ""}>Mis cursos</button>
+        <button type="button" data-ir="panel" ${estado.vista === "panel" || estado.previa ? 'aria-current="page"' : ""}>Panel de Jessica</button>
       </nav>` : ""}
+    <div class="notif">
+      <button class="notif__boton" type="button" data-notif aria-expanded="${estado.notifAbiertas}" aria-controls="notif-panel" aria-label="Notificaciones">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-1.7 1.7A1 1 0 0 0 4 19.4h16a1 1 0 0 0 .7-1.7L19 16Z"/></svg>
+        <span class="notif__contador" data-contador hidden></span>
+      </button>
+      <div class="notif__panel" id="notif-panel" data-notif-panel ${estado.notifAbiertas ? "" : "hidden"}></div>
+    </div>
     <span class="campus__nombre">${esc(u.displayName || u.email)}</span>
     <button class="btn btn--chico btn--linea" type="button" data-salir>Salir</button>`;
+  actualizarNotificaciones();
 }
 
 barra.addEventListener("click", (e) => {
   if (e.target.closest("[data-salir]")) { signOut(auth); return; }
+  if (e.target.closest("[data-notif]")) { alternarNotificaciones(); return; }
+  const item = e.target.closest("[data-notif-item]");
+  if (item) {
+    const n = listaNotificaciones().find((x) => x.id === item.dataset.notifItem);
+    cerrarNotificaciones();
+    if (n) n.accion();
+    return;
+  }
   const ir = e.target.closest("[data-ir]");
   if (ir) {
     if (ir.dataset.ir === "panel") abrirPanel(); else irAInicio();
   }
+});
+
+/* ---------- Notificaciones ---------- */
+/* Salen del estado de las inscripciones y opiniones: no hace falta guardarlas aparte.
+   Lo único que se guarda es hasta cuándo se leyeron, en usuarios/{uid}. */
+
+let cortarLeidas = null;
+let avisadas = null;   // notificaciones ya vistas en esta sesión, para avisar solo las que llegan nuevas
+let cargado = {};      // qué datos ya llegaron desde que entró: hasta entonces no se avisa nada
+
+function listaNotificaciones() {
+  const lista = [];
+  const titulo = (id) => (cursoPorId(id) || {}).titulo || id;
+  for (const i of estado.inscripciones) {
+    if (i.estado === "aprobada") {
+      lista.push({
+        id: `aprobada-${i.id}`, fecha: i.actualizada, tipo: "aprobada",
+        texto: `¡Listo! Tu inscripción a ${titulo(i.curso)} fue aprobada. Ya podés cursar.`,
+        accion: () => abrirCurso(i.curso),
+      });
+    } else if (i.estado === "rechazada") {
+      lista.push({
+        id: `rechazada-${i.id}`, fecha: i.actualizada, tipo: "rechazada",
+        texto: `Jessica necesita que vuelvas a subir el comprobante de ${titulo(i.curso)}.${i.nota ? ` Motivo: ${i.nota}` : ""}`,
+        accion: () => { irAInicio(); ventanaPago(i); },
+      });
+    }
+  }
+  if (estado.admin) {
+    for (const i of estado.todas.filter((x) => x.estado === "pendiente_aprobacion")) {
+      lista.push({
+        id: `comprobante-${i.id}`, fecha: i.actualizada, tipo: "comprobante",
+        texto: `${i.nombre} subió el comprobante de ${titulo(i.curso)}.`,
+        accion: () => { estado.panelPestana = "solicitudes"; estado.filtro = "pendiente_aprobacion"; estado.busqueda = ""; abrirPanel(); },
+      });
+    }
+    for (const o of estado.opiniones.filter((x) => !x.publicada)) {
+      lista.push({
+        id: `opinion-${o.id}`, fecha: o.actualizada, tipo: "opinion",
+        texto: `${o.nombre} dejó una opinión sobre ${titulo(o.curso)}.`,
+        accion: () => { estado.panelPestana = "opiniones"; abrirPanel(); },
+      });
+    }
+  }
+  return lista
+    .filter((n) => n.fecha && n.fecha.seconds)
+    .sort((a, b) => b.fecha.seconds - a.fecha.seconds)
+    .slice(0, 20);
+}
+
+const esNueva = (n) => n.fecha.seconds > estado.leidasHasta;
+
+function actualizarNotificaciones() {
+  const contador = barra.querySelector("[data-contador]");
+  if (!contador || !estado.usuario) return;
+  const lista = listaNotificaciones();
+  const nuevas = lista.filter(esNueva);
+  contador.hidden = !nuevas.length;
+  contador.textContent = nuevas.length > 9 ? "9+" : String(nuevas.length);
+  barra.querySelector("[data-notif]").setAttribute("aria-label", nuevas.length ? `Notificaciones: ${nuevas.length} sin leer` : "Notificaciones");
+
+  // Aviso en pantalla cuando llega una nueva mientras la persona está en el campus
+  // (las que ya estaban al entrar solo suman al contador).
+  if (cargado.leidas && cargado.inscripciones && cargado.admin) {
+    const claves = new Set(lista.map((n) => `${n.id}@${n.fecha.seconds}`));
+    if (avisadas) {
+      const llegada = lista.find((n) => esNueva(n) && !avisadas.has(`${n.id}@${n.fecha.seconds}`));
+      if (llegada) mostrarAviso(llegada.texto);
+    }
+    avisadas = claves;
+  }
+
+  if (estado.notifAbiertas) pintarPanelNotificaciones(lista);
+}
+
+function pintarPanelNotificaciones(lista = listaNotificaciones()) {
+  const panel = barra.querySelector("[data-notif-panel]");
+  if (!panel) return;
+  const iconos = { aprobada: "✓", rechazada: "!", comprobante: "$", opinion: "★" };
+  panel.innerHTML = `
+    <p class="notif__titulo">Notificaciones</p>
+    ${lista.length ? `<ul>${lista.map((n) => `
+      <li><button type="button" class="notif__item notif__item--${n.tipo} ${estado.resaltadas.has(n.id) ? "notif__item--nueva" : ""}" data-notif-item="${esc(n.id)}">
+        <span class="notif__icono" aria-hidden="true">${iconos[n.tipo]}</span>
+        <span><span class="notif__texto">${esc(n.texto)}</span><span class="notif__fecha">${esc(fecha(n.fecha))}</span></span>
+      </button></li>`).join("")}</ul>`
+      : `<p class="notif__vacio">No tenés notificaciones. Acá te vamos a avisar ${estado.admin ? "cuando alguien suba un comprobante o deje una opinión" : "cuando Jessica revise tu pago"}.</p>`}`;
+}
+
+function alternarNotificaciones() {
+  if (estado.notifAbiertas) { cerrarNotificaciones(); return; }
+  const lista = listaNotificaciones();
+  estado.resaltadas = new Set(lista.filter(esNueva).map((n) => n.id));
+  estado.notifAbiertas = true;
+  barra.querySelector("[data-notif]").setAttribute("aria-expanded", "true");
+  barra.querySelector("[data-notif-panel]").hidden = false;
+  pintarPanelNotificaciones(lista);
+  // Al abrir el panel, todas quedan leídas (en esta y en cualquier otra sesión).
+  if (estado.resaltadas.size) {
+    setDoc(doc(db, "usuarios", estado.usuario.uid), { notificacionesLeidas: serverTimestamp() }).catch(() => {});
+  }
+}
+
+function cerrarNotificaciones() {
+  estado.notifAbiertas = false;
+  const boton = barra.querySelector("[data-notif]");
+  const panel = barra.querySelector("[data-notif-panel]");
+  if (boton) boton.setAttribute("aria-expanded", "false");
+  if (panel) panel.hidden = true;
+}
+
+document.addEventListener("click", (e) => {
+  if (estado.notifAbiertas && !e.target.closest(".notif")) cerrarNotificaciones();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && estado.notifAbiertas) cerrarNotificaciones();
 });
 
 /* ---------- Ingreso y registro ---------- */
@@ -335,7 +487,7 @@ function pintarIngreso(modo = "ingresar", mensaje = "") {
 
 function irAInicio() {
   estado.vista = "inicio";
-  if (cortarPanel) { cortarPanel(); cortarPanel = null; }
+  estado.previa = false;
   pintarBarra();
   pintarInicio();
 }
@@ -549,6 +701,7 @@ function enlaceAviso(i) {
 async function abrirCurso(cursoId) {
   cerrarVentana();
   const c = cursoPorId(cursoId);
+  estado.previa = false;
   estado.vista = "curso";
   estado.cursoAbierto = c;
   pintarBarra();
@@ -591,6 +744,7 @@ async function cargarProgreso(cursoId) {
 }
 
 function guardarProgreso() {
+  if (estado.previa) return;
   const c = estado.cursoAbierto;
   const p = estado.progreso;
   setDoc(refProgreso(c.id), {
@@ -646,9 +800,14 @@ function pintarCurso() {
   const resultado = estado.progreso.evaluaciones[String(n)];
 
   app.innerHTML = `
+    ${estado.previa ? `
+      <div class="previa">
+        <p><strong>Vista previa.</strong> Así ven este curso tus alumnos, incluidos los cambios que todavía no guardaste. Nada de lo que hagas acá se guarda.</p>
+        <button class="btn btn--chico" type="button" data-volver>Volver al editor</button>
+      </div>` : ""}
     <div class="lector">
       <aside class="lector__indice">
-        <button class="lector__volver" type="button" data-volver>← Mis cursos</button>
+        <button class="lector__volver" type="button" data-volver>${estado.previa ? "← Volver al editor" : "← Mis cursos"}</button>
         <p class="rotulo">Curso</p>
         <h2>${esc(c.titulo)}</h2>
         <p class="lector__progreso">${vistosCurso.size} de ${modulos.length} módulos vistos</p>
@@ -688,7 +847,7 @@ function pintarCurso() {
               ? `<p>Felicitaciones por llegar hasta acá. Ya podés descargar tu certificado de finalización.</p>
                  <div class="clase__fin-acciones">
                    <button class="btn" type="button" data-certificado>Descargar mi certificado</button>
-                   <button class="btn btn--linea" type="button" data-opinion>Dejar mi opinión</button>
+                   ${estado.previa ? "" : `<button class="btn btn--linea" type="button" data-opinion>Dejar mi opinión</button>`}
                  </div>`
               : `<p>Para obtener el certificado te ${faltan === 1 ? "falta ver 1 módulo" : `faltan ver ${faltan} módulos`}. Los que ya viste aparecen marcados en verde en el índice.</p>`}
           </div>` : ""}
@@ -699,7 +858,7 @@ function pintarCurso() {
       </article>
     </div>`;
 
-  app.querySelectorAll("[data-volver]").forEach((b) => b.addEventListener("click", irAInicio));
+  app.querySelectorAll("[data-volver]").forEach((b) => b.addEventListener("click", estado.previa ? volverAlEditor : irAInicio));
   app.querySelectorAll("[data-modulo]").forEach((b) => b.addEventListener("click", () => irAModulo(Number(b.dataset.modulo))));
   app.querySelectorAll("[data-paso]").forEach((b) => b.addEventListener("click", () => irAModulo(n + Number(b.dataset.paso))));
   app.querySelectorAll("[data-certificado]").forEach((b) => b.addEventListener("click", ventanaCertificado));
@@ -808,11 +967,16 @@ async function ventanaOpinion() {
   });
 }
 
+function volverAlEditor() {
+  estado.panelPestana = "clases";
+  abrirPanel();
+}
+
 /* ---------- Certificado ---------- */
 
 function ventanaCertificado() {
   const c = estado.cursoAbierto;
-  if (!cursoCompleto()) return;
+  if (!cursoCompleto() && !estado.previa) return;
   const inscripcion = estado.inscripciones.find((i) => i.curso === c.id);
   abrirVentana(`
     <p class="rotulo">Certificado de finalización</p>
@@ -868,20 +1032,37 @@ function certificadoHtml(nombre, curso, codigo) {
 
 /* ---------- Panel de Jessica ---------- */
 
-function abrirPanel() {
-  if (!estado.admin) return;
-  estado.vista = "panel";
-  pintarBarra();
+// Jessica escucha todas las inscripciones y opiniones desde que entra: así le llegan las notificaciones.
+function escucharAdmin() {
   if (!cortarPanel) {
     const q = query(collection(db, "inscripciones"), orderBy("actualizada", "desc"));
     cortarPanel = onSnapshot(q, (snap) => {
       estado.todas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      cargado.admin = true;
       if (estado.vista === "panel" && estado.panelPestana === "solicitudes") {
         if (document.activeElement && document.activeElement.matches("[data-buscar]")) pintarListaPanel();
         else pintarPanel();
       }
-    }, () => { app.innerHTML = `<p class="campus__aviso">No tenés permiso para ver el panel.</p>`; });
+      actualizarNotificaciones();
+    }, () => { if (estado.vista === "panel") app.innerHTML = `<p class="campus__aviso">No tenés permiso para ver el panel.</p>`; });
   }
+  if (!cortarOpiniones) {
+    cortarOpiniones = onSnapshot(collection(db, "opiniones"), (snap) => {
+      estado.opiniones = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.actualizada?.seconds || 0) - (a.actualizada?.seconds || 0));
+      if (estado.vista === "panel" && estado.panelPestana === "opiniones") pintarPanel();
+      actualizarNotificaciones();
+    }, () => {});
+  }
+}
+
+function abrirPanel() {
+  if (!estado.admin) return;
+  cerrarVentana();
+  estado.vista = "panel";
+  estado.previa = false;
+  pintarBarra();
+  escucharAdmin();
   pintarPanel();
 }
 
@@ -932,13 +1113,6 @@ function pintarPanel() {
 let cortarOpiniones = null;
 
 function pintarOpiniones(pestanas, conectarPestanas) {
-  if (!cortarOpiniones) {
-    cortarOpiniones = onSnapshot(collection(db, "opiniones"), (snap) => {
-      estado.opiniones = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => (b.actualizada?.seconds || 0) - (a.actualizada?.seconds || 0));
-      if (estado.vista === "panel" && estado.panelPestana === "opiniones") pintarPanel();
-    });
-  }
   const estrellas = (n) => "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n);
   const publicadas = estado.opiniones.filter((o) => o.publicada).length;
   app.innerHTML = `
@@ -1142,7 +1316,10 @@ async function pintarEditor(pestanas) {
     </div>
     <div class="editor__acciones">
       <button class="btn btn--linea" type="button" data-agregar>+ Agregar módulo</button>
-      <button class="btn" type="button" data-guardar>Guardar cambios</button>
+      <div class="editor__guardar">
+        <button class="btn btn--linea" type="button" data-previa>Ver como alumno</button>
+        <button class="btn" type="button" data-guardar>Guardar cambios</button>
+      </div>
     </div>`;
 
   const leerFormulario = () => {
@@ -1168,6 +1345,20 @@ async function pintarEditor(pestanas) {
     editor.modulos.splice(Number(b.dataset.quitar), 1);
     pintarPanel();
   }));
+  app.querySelector("[data-previa]").addEventListener("click", () => {
+    leerFormulario();
+    const modulos = editor.modulos.filter((m) => m.titulo || m.texto);
+    if (!modulos.length) { mostrarAviso("Este curso todavía no tiene clases para mostrar."); return; }
+    estado.previa = true;
+    estado.vista = "curso";
+    estado.cursoAbierto = cursoPorId(editor.curso);
+    estado.contenido = modulos;
+    estado.progreso = { vistos: new Set(), modulo: 0, evaluaciones: {} };
+    estado.modulo = 0;
+    pintarBarra();
+    pintarCurso();
+    window.scrollTo(0, 0);
+  });
   app.querySelector("[data-guardar]").addEventListener("click", async (e) => {
     leerFormulario();
     e.target.disabled = true;
