@@ -623,6 +623,39 @@ button.btn { font-family: inherit; cursor: pointer; }
   font-size: 0.82rem;
 }
 
+/* Página 404 */
+.no-encontrada {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+.no-encontrada img { margin-bottom: 24px; }
+.no-encontrada p:not(.rotulo) { color: var(--tinta-tenue); max-width: 32em; margin: 0 0 28px; }
+.no-encontrada .acciones { justify-content: center; }
+
+/* Página de privacidad y términos */
+.legal { max-width: 760px; padding-top: 48px; padding-bottom: 80px; }
+.legal h1 { margin-bottom: 4px; }
+.legal__fecha { color: var(--tinta-tenue); font-size: 0.9rem; margin: 0 0 24px; }
+.legal__indice { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 16px 20px; border-radius: 12px; background: var(--celeste-suave); margin-bottom: 16px; }
+.legal__indice a { font-weight: 600; }
+.legal section { padding-top: 32px; }
+.legal h2 { font-size: 1.8rem; padding-bottom: 8px; border-bottom: 2px solid var(--dorado); }
+.legal h3 { font-size: 1.2rem; margin: 28px 0 8px; }
+.legal p:not(.rotulo), .legal li { color: var(--tinta); }
+.legal ul { padding-left: 22px; }
+.legal li { margin-bottom: 6px; }
+.legal__aviso { font-size: 0.88rem; color: var(--tinta-tenue) !important; padding: 14px 16px; border-left: 3px solid var(--celeste); background: #fff; }
+.legal__volver { margin-left: auto; }
+.pie__legal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 20px; }
+.pie__legal a { color: #f0f4fa; }
+.pie__legales { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+
 /* Tablet y celular */
 @media (max-width: 860px) {
   .menu-boton { display: flex; }

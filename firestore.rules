@@ -61,6 +61,21 @@ service cloud.firestore {
       allow write: if esAdmin() && cursoValido(curso);
     }
 
+    // Progreso de cada alumno en cada curso: módulos vistos y resultados de la autoevaluación.
+    match /progreso/{uid}/cursos/{curso} {
+      allow read: if esAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && cursoValido(curso)
+        && request.resource.data.keys().hasOnly(['vistos', 'modulo', 'evaluaciones', 'actualizada'])
+        && request.resource.data.vistos is list
+        && request.resource.data.vistos.size() <= 40
+        && request.resource.data.modulo is int
+        && request.resource.data.evaluaciones is map
+        && request.resource.data.evaluaciones.size() <= 40
+        && request.resource.data.actualizada == request.time;
+    }
+
     match /{documento=**} {
       allow read, write: if false;
     }

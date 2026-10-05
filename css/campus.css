@@ -146,6 +146,8 @@
   cursor: pointer;
 }
 
+.acceso__legal { margin: 18px 0 0; font-size: 0.82rem; color: var(--tinta-tenue); text-align: center; line-height: 1.5; }
+
 /* Pago */
 .pago__datos {
   margin: 20px 0;
@@ -303,6 +305,107 @@
 }
 .lector__nav .btn[disabled] { visibility: hidden; }
 
+.lector__certificado { width: 100%; margin-top: 16px; }
+
+/* Autoevaluación */
+.autoeval {
+  margin-top: 40px;
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--celeste-suave);
+}
+.autoeval h2 { font-size: 1.5rem; margin-bottom: 6px; }
+.autoeval__ayuda { color: var(--tinta-tenue); font-size: 0.95rem; }
+.autoeval__pregunta {
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: #fff;
+}
+.autoeval__pregunta legend { float: left; width: 100%; padding: 0; margin-bottom: 10px; font-weight: 600; color: var(--marino); line-height: 1.5; }
+.autoeval__opcion {
+  clear: both;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+.autoeval__opcion:hover { background: var(--celeste-suave); }
+.autoeval__opcion input { margin-top: 5px; accent-color: var(--marino); }
+.autoeval__pregunta--bien { border-color: var(--verde); box-shadow: inset 4px 0 0 var(--verde); }
+.autoeval__pregunta--mal { border-color: #c9675f; box-shadow: inset 4px 0 0 #c9675f; }
+.autoeval__opcion--correcta { background: #dcf1ea; }
+.autoeval__devolucion { margin: 10px 0 0; font-size: 0.95rem; color: var(--tinta); }
+.autoeval__total { margin: 16px 0 0; font-weight: 600; color: var(--marino); }
+
+/* Certificado */
+.certificado-vista { margin: 8px 0 4px; overflow: hidden; border-radius: 8px; border: 1px solid var(--linea); }
+.certificado-vista .certificado { width: 1100px; transform: scale(var(--escala, 0.58)); transform-origin: top left; margin-bottom: calc(-778px * (1 - var(--escala, 0.58))); }
+.certificado {
+  width: 1100px;
+  height: 778px;
+  padding: 28px;
+  background: #fdfcf9;
+  font-family: var(--font-body);
+  color: var(--tinta);
+}
+.certificado__borde {
+  height: 100%;
+  border: 3px solid var(--marino);
+  outline: 1px solid var(--dorado);
+  outline-offset: -12px;
+  border-radius: 6px;
+  padding: 40px 70px 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background:
+    radial-gradient(circle at 0 0, var(--celeste-suave) 0 120px, transparent 121px),
+    radial-gradient(circle at 100% 100%, var(--celeste-suave) 0 140px, transparent 141px);
+}
+.certificado p { margin: 0; }
+.certificado__logo { width: 110px; height: 110px; margin-bottom: 14px; }
+.certificado__rotulo { font-size: 15px; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase; color: var(--verde); margin-bottom: 26px !important; }
+.certificado__texto { font-size: 19px; color: var(--tinta-tenue); }
+.certificado__nombre {
+  font-family: var(--font-display);
+  font-size: 50px;
+  font-weight: 600;
+  color: var(--marino);
+  margin: 10px 0 14px !important;
+  padding: 0 40px 10px;
+  border-bottom: 2px solid var(--dorado);
+}
+.certificado__curso { font-family: var(--font-display); font-style: italic; font-size: 34px; color: var(--marino-alt); margin-top: 8px !important; }
+.certificado__detalle { font-size: 16px; color: var(--tinta-tenue); margin-top: 8px !important; }
+.certificado__pie {
+  margin-top: auto;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--tinta);
+}
+.certificado__pie > div { width: 280px; }
+.certificado__linea { display: block; height: 1px; background: var(--marino); margin-bottom: 8px; }
+.certificado__codigo { margin-top: 14px !important; font-size: 12px; color: var(--tinta-tenue); letter-spacing: 0.05em; }
+
+#impresion { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 0; }
+  body.campus > *:not(#impresion) { display: none !important; }
+  #impresion { display: block; }
+  #impresion .certificado { width: 297mm; height: 209mm; padding: 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
 /* Panel */
 .panel__pestanas { display: flex; gap: 8px; border-bottom: 1px solid var(--linea); margin-bottom: 20px; }
 .panel__pestanas button {
@@ -380,6 +483,7 @@
 .pie--campus a { color: #f0f4fa; }
 
 @media (max-width: 860px) {
+  .certificado-vista .certificado { --escala: 0.5; }
   .campus__grilla { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .acceso { grid-template-columns: 1fr; gap: 28px; }
   .acceso__texto img { display: none; }
@@ -396,6 +500,8 @@
 }
 
 @media (max-width: 560px) {
+  .autoeval { padding: 18px; margin-left: -6px; margin-right: -6px; }
+  .certificado-vista .certificado { --escala: 0.3; }
   .campus__main { padding-top: 24px; }
   .campus__grilla { grid-template-columns: 1fr; }
   .campus__pestanas button { padding: 7px 10px; font-size: 0.82rem; }

@@ -281,6 +281,7 @@ function pintarIngreso(modo = "ingresar", mensaje = "") {
           <button class="btn acceso__enviar" type="submit">${modo === "registro" ? "Crear mi cuenta" : "Ingresar"}</button>
           ${modo === "ingresar" ? `<button class="acceso__olvido" type="button" data-olvido>Me olvidé la contraseña</button>` : ""}
         </form>
+        <p class="acceso__legal">Al ingresar o crear tu cuenta aceptás los <a href="privacidad.html#terminos">términos de uso</a> y la <a href="privacidad.html#privacidad">política de privacidad</a>. Si sos menor de 18 años, necesitás la autorización de un adulto a cargo.</p>
       </div>
     </section>`;
 
@@ -545,14 +546,64 @@ async function abrirCurso(cursoId) {
     app.querySelector("[data-volver]").addEventListener("click", irAInicio);
     return;
   }
-  const guardado = Number(localStorage.getItem(`jb-modulo-${cursoId}`) || 0);
-  estado.modulo = Math.min(Math.max(guardado, 0), Math.max(estado.contenido.length - 1, 0));
+  await cargarProgreso(cursoId);
+  estado.modulo = Math.min(Math.max(estado.progreso.modulo, 0), Math.max(estado.contenido.length - 1, 0));
   pintarCurso();
 }
 
-function vistos(cursoId) {
-  try { return new Set(JSON.parse(localStorage.getItem(`jb-vistos-${cursoId}`) || "[]")); }
-  catch { return new Set(); }
+/* Progreso: se guarda en la cuenta, así se sigue en cualquier dispositivo. */
+
+function refProgreso(cursoId) {
+  return doc(db, "progreso", estado.usuario.uid, "cursos", cursoId);
+}
+
+async function cargarProgreso(cursoId) {
+  const progreso = { vistos: new Set(), modulo: 0, evaluaciones: {} };
+  try {
+    const snap = await getDoc(refProgreso(cursoId));
+    if (snap.exists()) {
+      const d = snap.data();
+      (d.vistos || []).forEach((n) => progreso.vistos.add(n));
+      progreso.modulo = d.modulo || 0;
+      progreso.evaluaciones = d.evaluaciones || {};
+    }
+  } catch { /* sin conexión: arranca de cero y se guarda después */ }
+  // Suma lo que se había guardado solo en este dispositivo (versión anterior del campus).
+  try {
+    JSON.parse(localStorage.getItem(`jb-vistos-${cursoId}`) || "[]").forEach((n) => progreso.vistos.add(n));
+  } catch { /* sin almacenamiento local */ }
+  estado.progreso = progreso;
+}
+
+function guardarProgreso() {
+  const c = estado.cursoAbierto;
+  const p = estado.progreso;
+  setDoc(refProgreso(c.id), {
+    vistos: [...p.vistos].sort((a, b) => a - b),
+    modulo: estado.modulo,
+    evaluaciones: p.evaluaciones,
+    actualizada: serverTimestamp(),
+  }).catch(() => { /* se reintenta en el próximo cambio de módulo */ });
+}
+
+/* Autoevaluación: en el texto de cada módulo, una pregunta por bloque:
+   "? pregunta", "- opción", "* opción correcta" y "= explicación". */
+function leerAutoevaluacion(texto) {
+  const preguntas = [];
+  let actual = null;
+  for (const cruda of String(texto || "").split("\n")) {
+    const linea = cruda.trim();
+    if (linea.startsWith("? ")) { actual = { pregunta: linea.slice(2), opciones: [], correcta: -1, explicacion: "" }; preguntas.push(actual); }
+    else if (actual && (linea.startsWith("- ") || linea.startsWith("* "))) {
+      if (linea.startsWith("* ")) actual.correcta = actual.opciones.length;
+      actual.opciones.push(linea.slice(2));
+    } else if (actual && linea.startsWith("= ")) actual.explicacion = linea.slice(2);
+  }
+  return preguntas.filter((p) => p.opciones.length > 1 && p.correcta >= 0);
+}
+
+function cursoCompleto() {
+  return estado.contenido.length > 0 && estado.contenido.every((_, i) => estado.progreso.vistos.has(i));
 }
 
 function pintarCurso() {
@@ -570,13 +621,14 @@ function pintarCurso() {
   }
   const n = estado.modulo;
   const m = modulos[n];
-  const vistosCurso = vistos(c.id);
+  const vistosCurso = estado.progreso.vistos;
   vistosCurso.add(n);
-  try {
-    localStorage.setItem(`jb-vistos-${c.id}`, JSON.stringify([...vistosCurso]));
-    localStorage.setItem(`jb-modulo-${c.id}`, String(n));
-  } catch { /* sin almacenamiento local: el curso igual funciona */ }
+  guardarProgreso();
   const ultimo = n === modulos.length - 1;
+  const completo = cursoCompleto();
+  const faltan = modulos.length - vistosCurso.size;
+  const preguntas = leerAutoevaluacion(m.autoevaluacion);
+  const resultado = estado.progreso.evaluaciones[String(n)];
 
   app.innerHTML = `
     <div class="lector">
@@ -591,16 +643,36 @@ function pintarCurso() {
             <li><button type="button" data-modulo="${i}" ${i === n ? 'aria-current="step"' : ""} class="${vistosCurso.has(i) ? "visto" : ""}">
               <span>Módulo ${i + 1}</span>${esc(mod.titulo)}</button></li>`).join("")}
         </ol>
+        ${completo ? `<button class="btn btn--chico lector__certificado" type="button" data-certificado>🎓 Mi certificado</button>` : ""}
       </aside>
       <article class="lector__clase clase">
         <p class="rotulo">Módulo ${n + 1} de ${modulos.length}</p>
         <h1>${esc(m.titulo)}</h1>
         ${textoAHtml(m.texto)}
+        ${preguntas.length ? `
+          <form class="autoeval" data-autoeval>
+            <h2>Autoevaluación</h2>
+            <p class="autoeval__ayuda">${resultado !== undefined
+              ? `Tu último resultado: <strong>${resultado} de ${preguntas.length}</strong>. Podés volver a intentarlo.`
+              : "Respondé para repasar lo que viste. No tiene nota: es para vos."}</p>
+            ${preguntas.map((p, i) => `
+              <fieldset class="autoeval__pregunta" data-pregunta="${i}">
+                <legend>${i + 1}. ${esc(p.pregunta)}</legend>
+                ${p.opciones.map((o, j) => `
+                  <label class="autoeval__opcion"><input type="radio" name="p${i}" value="${j}" /> <span>${esc(o)}</span></label>`).join("")}
+                <p class="autoeval__devolucion" hidden></p>
+              </fieldset>`).join("")}
+            <p class="acceso__error" role="alert" data-error></p>
+            <button class="btn" type="submit">Comprobar respuestas</button>
+            <p class="autoeval__total" role="status" hidden></p>
+          </form>` : ""}
         ${ultimo ? `
           <div class="clase__fin">
-            <h3>¡Terminaste el curso!</h3>
-            <p>Felicitaciones por llegar hasta acá. Pedile a Jessica tu certificado de finalización.</p>
-            <a class="btn" href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola Jessica, terminé el curso ${c.titulo} y quiero pedir mi certificado.`)}" target="_blank" rel="noopener">Pedir mi certificado</a>
+            <h3>${completo ? "¡Terminaste el curso!" : "Llegaste al último módulo"}</h3>
+            ${completo
+              ? `<p>Felicitaciones por llegar hasta acá. Ya podés descargar tu certificado de finalización.</p>
+                 <button class="btn" type="button" data-certificado>Descargar mi certificado</button>`
+              : `<p>Para obtener el certificado te ${faltan === 1 ? "falta ver 1 módulo" : `faltan ver ${faltan} módulos`}. Los que ya viste aparecen marcados en verde en el índice.</p>`}
           </div>` : ""}
         <nav class="lector__nav" aria-label="Cambiar de módulo">
           <button class="btn btn--linea" type="button" data-paso="-1" ${n === 0 ? "disabled" : ""}>← Anterior</button>
@@ -609,15 +681,102 @@ function pintarCurso() {
       </article>
     </div>`;
 
-  app.querySelector("[data-volver]").addEventListener("click", irAInicio);
+  app.querySelectorAll("[data-volver]").forEach((b) => b.addEventListener("click", irAInicio));
   app.querySelectorAll("[data-modulo]").forEach((b) => b.addEventListener("click", () => irAModulo(Number(b.dataset.modulo))));
   app.querySelectorAll("[data-paso]").forEach((b) => b.addEventListener("click", () => irAModulo(n + Number(b.dataset.paso))));
+  app.querySelectorAll("[data-certificado]").forEach((b) => b.addEventListener("click", ventanaCertificado));
+
+  const form = app.querySelector("[data-autoeval]");
+  if (form) form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const respuestas = preguntas.map((_, i) => form.querySelector(`input[name="p${i}"]:checked`));
+    const error = form.querySelector("[data-error]");
+    if (respuestas.some((r) => !r)) { error.textContent = "Respondé todas las preguntas antes de comprobar."; return; }
+    error.textContent = "";
+    let aciertos = 0;
+    preguntas.forEach((p, i) => {
+      const elegida = Number(respuestas[i].value);
+      const bien = elegida === p.correcta;
+      if (bien) aciertos++;
+      const caja = form.querySelector(`[data-pregunta="${i}"]`);
+      caja.classList.toggle("autoeval__pregunta--bien", bien);
+      caja.classList.toggle("autoeval__pregunta--mal", !bien);
+      caja.querySelectorAll(".autoeval__opcion").forEach((op, j) => op.classList.toggle("autoeval__opcion--correcta", j === p.correcta));
+      const devolucion = caja.querySelector(".autoeval__devolucion");
+      devolucion.hidden = false;
+      const correcta = p.opciones[p.correcta].replace(/[.!?…]+$/, "");
+      devolucion.innerHTML = `<strong>${bien ? "¡Bien!" : `La correcta es: ${esc(correcta)}.`}</strong> ${esc(p.explicacion)}`;
+    });
+    const total = form.querySelector(".autoeval__total");
+    total.hidden = false;
+    total.textContent = `Acertaste ${aciertos} de ${preguntas.length}.` + (aciertos === preguntas.length ? " ¡Excelente!" : " Repasá las que quedaron y probá de nuevo cuando quieras.");
+    estado.progreso.evaluaciones[String(n)] = aciertos;
+    guardarProgreso();
+  });
 }
 
 function irAModulo(i) {
   estado.modulo = Math.min(Math.max(i, 0), estado.contenido.length - 1);
   pintarCurso();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ---------- Certificado ---------- */
+
+function ventanaCertificado() {
+  const c = estado.cursoAbierto;
+  if (!cursoCompleto()) return;
+  const inscripcion = estado.inscripciones.find((i) => i.curso === c.id);
+  abrirVentana(`
+    <p class="rotulo">Certificado de finalización</p>
+    <h2 id="ventana-titulo">${esc(c.titulo)}</h2>
+    <p>Revisá cómo querés que aparezca tu nombre. Después podés imprimirlo o guardarlo como PDF.</p>
+    <label class="campo"><span>Nombre y apellido</span>
+      <input data-nombre maxlength="80" value="${esc(estado.usuario.displayName || "")}" /></label>
+    <div class="certificado-vista" data-vista></div>
+    <div class="programa__pie"><button class="btn" type="button" data-imprimir>Imprimir o guardar en PDF</button></div>`);
+  const input = ventanaContenido.querySelector("[data-nombre]");
+  const vista = ventanaContenido.querySelector("[data-vista]");
+  const pintar = () => {
+    vista.innerHTML = certificadoHtml(input.value.trim() || "Tu nombre", c, inscripcion ? inscripcion.codigo : "");
+  };
+  input.addEventListener("input", pintar);
+  pintar();
+  ventanaContenido.querySelector("[data-imprimir]").addEventListener("click", () => {
+    if (!input.value.trim()) { input.focus(); return; }
+    let hoja = document.getElementById("impresion");
+    if (!hoja) {
+      hoja = document.createElement("div");
+      hoja.id = "impresion";
+      document.body.appendChild(hoja);
+    }
+    hoja.innerHTML = certificadoHtml(input.value.trim(), c, inscripcion ? inscripcion.codigo : "");
+    const titulo = document.title;
+    document.title = `Certificado - ${c.titulo} - ${input.value.trim()}`;
+    window.print();
+    document.title = titulo;
+  });
+}
+
+function certificadoHtml(nombre, curso, codigo) {
+  const hoy = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  return `
+    <div class="certificado">
+      <div class="certificado__borde">
+        <img class="certificado__logo" src="assets/logo.png" alt="" width="110" height="110" />
+        <p class="certificado__rotulo">Certificado de finalización</p>
+        <p class="certificado__texto">Se certifica que</p>
+        <p class="certificado__nombre">${esc(nombre)}</p>
+        <p class="certificado__texto">completó el curso online</p>
+        <p class="certificado__curso">${esc(curso.titulo)}</p>
+        <p class="certificado__detalle">${curso.modulos.length} módulos · ${curso.semanas} semanas de cursada</p>
+        <div class="certificado__pie">
+          <div><span class="certificado__linea"></span>Jessica M. Benitez<br />Psicopedagoga · M.P. 1007</div>
+          <div>Posadas, Misiones<br />${esc(hoy)}</div>
+        </div>
+        ${codigo ? `<p class="certificado__codigo">Código de verificación: ${esc(codigo)}</p>` : ""}
+      </div>
+    </div>`;
 }
 
 /* ---------- Panel de Jessica ---------- */
@@ -734,7 +893,7 @@ async function pintarEditor(pestanas) {
       const snap = await getDoc(doc(db, "contenidos", c.id));
       editor.modulos = snap.exists() && snap.data().modulos?.length
         ? snap.data().modulos
-        : c.modulos.map((m) => ({ titulo: m.titulo, texto: "" }));
+        : c.modulos.map((m) => ({ titulo: m.titulo, texto: "", autoevaluacion: "" }));
     } catch {
       app.innerHTML = `${pestanas}<p class="campus__aviso">No se pudieron cargar las clases.</p>`;
       return;
@@ -745,7 +904,7 @@ async function pintarEditor(pestanas) {
     <section class="campus__bienvenida">
       <p class="rotulo">Panel de Jessica</p>
       <h1>Clases de los cursos</h1>
-      <p>Lo que escribas acá es lo que ven los alumnos aprobados. Separá los párrafos con una línea en blanco; usá <code>## </code> para un subtítulo, <code>- </code> para una lista, <code>&gt; </code> para un recuadro y <code>**así**</code> para negrita.</p>
+      <p>Lo que escribas acá es lo que ven los alumnos aprobados. Separá los párrafos con una línea en blanco; usá <code>## </code> para un subtítulo, <code>- </code> para una lista, <code>&gt; </code> para un recuadro y <code>**así**</code> para negrita. En la autoevaluación, cada pregunta empieza con <code>? </code>, las opciones con <code>- </code> (la correcta con <code>* </code>) y la explicación con <code>= </code>.</p>
     </section>
     ${pestanas}
     <div class="editor__barra">
@@ -760,6 +919,7 @@ async function pintarEditor(pestanas) {
           <legend>Módulo ${i + 1}</legend>
           <label class="campo"><span>Título</span><input data-titulo="${i}" value="${esc(m.titulo)}" maxlength="150" /></label>
           <label class="campo"><span>Contenido</span><textarea data-texto="${i}" rows="12">${esc(m.texto)}</textarea></label>
+          <label class="campo"><span>Autoevaluación (opcional)</span><textarea data-autoeval="${i}" rows="6" placeholder="? ¿Pregunta?&#10;- Opción incorrecta&#10;* Opción correcta&#10;= Explicación">${esc(m.autoevaluacion || "")}</textarea></label>
           <button class="editor__quitar" type="button" data-quitar="${i}">Quitar este módulo</button>
         </fieldset>`).join("")}
     </div>
@@ -772,6 +932,7 @@ async function pintarEditor(pestanas) {
     editor.modulos = editor.modulos.map((m, i) => ({
       titulo: app.querySelector(`[data-titulo="${i}"]`).value.trim(),
       texto: app.querySelector(`[data-texto="${i}"]`).value,
+      autoevaluacion: app.querySelector(`[data-autoeval="${i}"]`).value,
     }));
   };
   app.querySelectorAll("[data-pestana]").forEach((b) => b.addEventListener("click", () => { estado.panelPestana = b.dataset.pestana; pintarPanel(); }));
@@ -781,7 +942,7 @@ async function pintarEditor(pestanas) {
   });
   app.querySelector("[data-agregar]").addEventListener("click", () => {
     leerFormulario();
-    editor.modulos.push({ titulo: "", texto: "" });
+    editor.modulos.push({ titulo: "", texto: "", autoevaluacion: "" });
     pintarPanel();
   });
   app.querySelectorAll("[data-quitar]").forEach((b) => b.addEventListener("click", () => {
@@ -809,7 +970,7 @@ async function pintarEditor(pestanas) {
       if (!confirm(`Se van a reemplazar las clases de ${ids.length} curso${ids.length === 1 ? "" : "s"}. ¿Seguimos?`)) return;
       const lote = writeBatch(db);
       ids.forEach((id) => lote.set(doc(db, "contenidos", id), {
-        modulos: datos[id].modulos.map((m) => ({ titulo: String(m.titulo || ""), texto: String(m.texto || "") })),
+        modulos: datos[id].modulos.map((m) => ({ titulo: String(m.titulo || ""), texto: String(m.texto || ""), autoevaluacion: String(m.autoevaluacion || "") })),
         actualizada: serverTimestamp(),
       }));
       await lote.commit();
