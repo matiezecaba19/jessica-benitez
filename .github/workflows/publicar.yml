@@ -1,0 +1,33 @@
+# Publica la página en GitHub Pages cada vez que se sube un cambio a main.
+# Requiere: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+name: Publicar la página
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una publicación por vez; si llega una nueva, reemplaza a la que estaba esperando.
+concurrency:
+  group: publicar-pagina
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.publicacion.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: publicacion
+        uses: actions/deploy-pages@v4
