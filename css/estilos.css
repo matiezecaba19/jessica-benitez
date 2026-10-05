@@ -623,6 +623,35 @@ button.btn { font-family: inherit; cursor: pointer; }
   font-size: 0.82rem;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Opiniones de alumnos (se muestra solo si hay publicadas) */
+.opiniones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 32px; }
+.opinion {
+  margin: 0;
+  padding: 24px;
+  border-radius: var(--radio);
+  background: #fff;
+  border: 1px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.opinion__estrellas { margin: 0; color: var(--dorado); letter-spacing: 2px; font-size: 1.1rem; }
+.opinion blockquote { margin: 0; font-family: var(--font-display); font-size: 1.1rem; line-height: 1.5; color: var(--marino); }
+.opinion figcaption { margin-top: auto; font-size: 0.88rem; color: var(--tinta-tenue); }
+.opinion figcaption strong { color: var(--tinta); }
+
 /* Página 404 */
 .no-encontrada {
   min-height: 100vh;
@@ -690,6 +719,7 @@ button.btn { font-family: inherit; cursor: pointer; }
   .proceso { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 24px; }
   .proceso li::after { display: none; }
   .preguntas { grid-template-columns: 1fr; gap: 28px; }
+  .opiniones { grid-template-columns: 1fr; }
   .encabezado { grid-template-columns: minmax(0, 1fr) 240px; gap: 20px; }
   .ilustracion--preguntas { display: none; }
   .seccion { padding: 64px 0; }

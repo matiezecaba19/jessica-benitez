@@ -76,6 +76,37 @@ service cloud.firestore {
         && request.resource.data.actualizada == request.time;
     }
 
+    // Opiniones: el alumno con la inscripción aprobada deja la suya; Jessica decide cuáles se publican.
+    // Las publicadas las puede leer cualquiera, porque se muestran en la página.
+    match /opiniones/{id} {
+      allow read: if esAdmin()
+        || resource.data.publicada == true
+        || (request.auth != null && id.matches('^' + request.auth.uid + '_[a-z]+$'));
+
+      function opinionValida() {
+        return request.auth != null
+          && request.resource.data.keys().hasOnly(['uid', 'curso', 'nombre', 'estrellas', 'comentario', 'autoriza', 'publicada', 'actualizada'])
+          && request.resource.data.uid == request.auth.uid
+          && cursoValido(request.resource.data.curso)
+          && id == request.auth.uid + '_' + request.resource.data.curso
+          && request.resource.data.estrellas is int
+          && request.resource.data.estrellas >= 1 && request.resource.data.estrellas <= 5
+          && request.resource.data.comentario is string && request.resource.data.comentario.size() <= 500
+          && textoCorto(request.resource.data.nombre, 60)
+          && request.resource.data.autoriza is bool
+          && request.resource.data.publicada == false
+          && request.resource.data.actualizada == request.time
+          && get(/databases/$(database)/documents/inscripciones/$(id)).data.estado == 'aprobada';
+      }
+
+      allow create: if opinionValida();
+      allow update: if opinionValida()
+        || (esAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['publicada'])
+          && (request.resource.data.publicada == false || resource.data.autoriza == true));
+      allow delete: if esAdmin();
+    }
+
     match /{documento=**} {
       allow read, write: if false;
     }

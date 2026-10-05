@@ -66,7 +66,7 @@ ventana.addEventListener("click", (e) => { if (e.target === ventana) cerrarVenta
 
 function fecha(ts) {
   if (!ts || !ts.toDate) return "";
-  return ts.toDate().toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return ts.toDate().toLocaleDateString("es-AR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function codigoNuevo() {
@@ -186,6 +186,8 @@ const estado = {
   panelPestana: "solicitudes",
   filtro: "pendiente_aprobacion",
   todas: [],
+  busqueda: "",
+  opiniones: [],
   cursoPendiente: params.get("curso"),
 };
 let cortarInscripciones = null;
@@ -196,6 +198,7 @@ onAuthStateChanged(auth, (usuario) => {
   estado.admin = !!(usuario && usuario.emailVerified && ADMINS.includes((usuario.email || "").toLowerCase()));
   if (cortarInscripciones) { cortarInscripciones(); cortarInscripciones = null; }
   if (cortarPanel) { cortarPanel(); cortarPanel = null; }
+  if (cortarOpiniones) { cortarOpiniones(); cortarOpiniones = null; }
   estado.inscripciones = [];
   estado.vista = "inicio";
   pintarBarra();
@@ -403,7 +406,7 @@ function pintarInicio() {
 function detalleEstado(i) {
   switch (i.estado) {
     case "pendiente_pago": return `Transferí y subí el comprobante. Tu código: <strong>${esc(i.codigo)}</strong>`;
-    case "pendiente_aprobacion": return "Jessica está revisando tu comprobante. Te avisamos acá cuando esté aprobado.";
+    case "pendiente_aprobacion": return `Jessica está revisando tu comprobante. Te avisamos acá cuando esté aprobado. <a href="${enlaceAviso(i)}" target="_blank" rel="noopener">Avisarle por WhatsApp</a>`;
     case "aprobada": return "¡Listo! Ya podés cursar.";
     case "rechazada": return i.nota ? `Motivo: ${esc(i.nota)}` : "Revisá el comprobante y volvé a subirlo.";
     default: return "";
@@ -524,9 +527,21 @@ function ventanaEnRevision(i) {
       <h2 id="ventana-titulo">¡Gracias! Jessica está revisando tu pago</h2>
       <p>Cuando lo apruebe, <strong>${esc(c.titulo)}</strong> aparece habilitado en «Mis cursos». Podés cerrar esta ventana y volver cuando quieras.</p>
       <p class="pago__ayuda">Tu código: <strong>${esc(i.codigo)}</strong></p>
-      <div class="programa__pie"><button class="btn" type="button" data-cerrar>Entendido</button></div>
+      <p>Para que lo revise más rápido, avisale que ya lo subiste:</p>
+      <div class="revision__acciones">
+        <a class="btn btn--whatsapp" href="${enlaceAviso(i)}" target="_blank" rel="noopener">Avisarle a Jessica por WhatsApp</a>
+        <button class="btn btn--linea" type="button" data-cerrar>Listo</button>
+      </div>
     </div>`);
   ventanaContenido.querySelector("[data-cerrar]").addEventListener("click", cerrarVentana);
+}
+
+// Mensaje ya escrito para que el alumno le avise a Jessica que subió el comprobante.
+function enlaceAviso(i) {
+  const c = cursoPorId(i.curso);
+  const nombre = estado.usuario.displayName || estado.usuario.email || "";
+  const texto = `Hola Jessica, soy ${nombre}. Ya subí al campus el comprobante de pago del curso ${c.titulo}. Mi código es ${i.codigo}.`;
+  return `https://wa.me/${WHATSAPP}?text=${encodeURIComponent(texto)}`;
 }
 
 /* ---------- Lector de clases ---------- */
@@ -671,7 +686,10 @@ function pintarCurso() {
             <h3>${completo ? "¡Terminaste el curso!" : "Llegaste al último módulo"}</h3>
             ${completo
               ? `<p>Felicitaciones por llegar hasta acá. Ya podés descargar tu certificado de finalización.</p>
-                 <button class="btn" type="button" data-certificado>Descargar mi certificado</button>`
+                 <div class="clase__fin-acciones">
+                   <button class="btn" type="button" data-certificado>Descargar mi certificado</button>
+                   <button class="btn btn--linea" type="button" data-opinion>Dejar mi opinión</button>
+                 </div>`
               : `<p>Para obtener el certificado te ${faltan === 1 ? "falta ver 1 módulo" : `faltan ver ${faltan} módulos`}. Los que ya viste aparecen marcados en verde en el índice.</p>`}
           </div>` : ""}
         <nav class="lector__nav" aria-label="Cambiar de módulo">
@@ -685,6 +703,7 @@ function pintarCurso() {
   app.querySelectorAll("[data-modulo]").forEach((b) => b.addEventListener("click", () => irAModulo(Number(b.dataset.modulo))));
   app.querySelectorAll("[data-paso]").forEach((b) => b.addEventListener("click", () => irAModulo(n + Number(b.dataset.paso))));
   app.querySelectorAll("[data-certificado]").forEach((b) => b.addEventListener("click", ventanaCertificado));
+  app.querySelectorAll("[data-opinion]").forEach((b) => b.addEventListener("click", ventanaOpinion));
 
   const form = app.querySelector("[data-autoeval]");
   if (form) form.addEventListener("submit", (e) => {
@@ -719,6 +738,74 @@ function irAModulo(i) {
   estado.modulo = Math.min(Math.max(i, 0), estado.contenido.length - 1);
   pintarCurso();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ---------- Opinión del alumno ---------- */
+
+// Nombre que se muestra en la página: nombre de pila e inicial del apellido.
+function nombrePublico(nombre) {
+  const partes = String(nombre || "").trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return "Alumna/o del campus";
+  return partes.length > 1 ? `${partes[0]} ${partes[partes.length - 1][0].toUpperCase()}.` : partes[0];
+}
+
+async function ventanaOpinion() {
+  const c = estado.cursoAbierto;
+  const id = `${estado.usuario.uid}_${c.id}`;
+  let previa = null;
+  try {
+    const snap = await getDoc(doc(db, "opiniones", id));
+    if (snap.exists()) previa = snap.data();
+  } catch { /* si no se puede leer, se arranca en blanco */ }
+  abrirVentana(`
+    <p class="rotulo">Tu opinión</p>
+    <h2 id="ventana-titulo">¿Qué te pareció ${esc(c.titulo)}?</h2>
+    <p>Tu comentario ayuda a Jessica a mejorar los cursos y a otras personas a decidirse.</p>
+    <form data-form-opinion>
+      <fieldset class="estrellas">
+        <legend>Puntaje</legend>
+        <div class="estrellas__fila">
+          ${[5, 4, 3, 2, 1].map((n) => `
+            <input type="radio" id="estrella-${n}" name="estrellas" value="${n}" ${previa && previa.estrellas === n ? "checked" : ""} />
+            <label for="estrella-${n}" title="${n} de 5"><span class="sr-only">${n} de 5</span>★</label>`).join("")}
+        </div>
+      </fieldset>
+      <label class="campo"><span>Comentario</span>
+        <textarea name="comentario" rows="4" maxlength="500" placeholder="¿Qué te sirvió? ¿Qué cambiarías?">${esc(previa ? previa.comentario : "")}</textarea></label>
+      <label class="opinion__permiso"><input type="checkbox" name="autoriza" ${previa && previa.autoriza ? "checked" : ""} />
+        <span>Acepto que se muestre en la página de Jessica como <strong>${esc(nombrePublico(estado.usuario.displayName))}</strong>.</span></label>
+      <p class="acceso__error" role="alert" data-error></p>
+      <div class="programa__pie"><button class="btn" type="submit">${previa ? "Actualizar mi opinión" : "Enviar opinión"}</button></div>
+    </form>`);
+  const form = ventanaContenido.querySelector("[data-form-opinion]");
+  form.addEventListener("change", () => { form.querySelector("[data-error]").textContent = ""; });
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const datos = new FormData(form);
+    const estrellas = Number(datos.get("estrellas"));
+    const comentario = String(datos.get("comentario") || "").trim();
+    const error = form.querySelector("[data-error]");
+    if (!estrellas) { error.textContent = "Elegí un puntaje de 1 a 5 estrellas."; return; }
+    const boton = form.querySelector('button[type="submit"]');
+    boton.disabled = true;
+    try {
+      await setDoc(doc(db, "opiniones", id), {
+        uid: estado.usuario.uid,
+        curso: c.id,
+        nombre: nombrePublico(estado.usuario.displayName),
+        estrellas,
+        comentario,
+        autoriza: datos.get("autoriza") === "on",
+        publicada: false,
+        actualizada: serverTimestamp(),
+      });
+      cerrarVentana();
+      mostrarAviso("¡Gracias por tu opinión!");
+    } catch {
+      boton.disabled = false;
+      error.textContent = "No pudimos guardar tu opinión. Probá de nuevo.";
+    }
+  });
 }
 
 /* ---------- Certificado ---------- */
@@ -789,7 +876,10 @@ function abrirPanel() {
     const q = query(collection(db, "inscripciones"), orderBy("actualizada", "desc"));
     cortarPanel = onSnapshot(q, (snap) => {
       estado.todas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      if (estado.vista === "panel" && estado.panelPestana === "solicitudes") pintarPanel();
+      if (estado.vista === "panel" && estado.panelPestana === "solicitudes") {
+        if (document.activeElement && document.activeElement.matches("[data-buscar]")) pintarListaPanel();
+        else pintarPanel();
+      }
     }, () => { app.innerHTML = `<p class="campus__aviso">No tenés permiso para ver el panel.</p>`; });
   }
   pintarPanel();
@@ -800,15 +890,20 @@ function pintarPanel() {
     <div class="panel__pestanas" role="tablist">
       <button type="button" role="tab" data-pestana="solicitudes" aria-selected="${estado.panelPestana === "solicitudes"}">Inscripciones y pagos</button>
       <button type="button" role="tab" data-pestana="clases" aria-selected="${estado.panelPestana === "clases"}">Clases de los cursos</button>
+      <button type="button" role="tab" data-pestana="opiniones" aria-selected="${estado.panelPestana === "opiniones"}">Opiniones</button>
     </div>`;
+  const conectarPestanas = () => app.querySelectorAll("[data-pestana]").forEach((b) => b.addEventListener("click", () => {
+    estado.panelPestana = b.dataset.pestana;
+    pintarPanel();
+  }));
   if (estado.panelPestana === "clases") { pintarEditor(pestanas); return; }
+  if (estado.panelPestana === "opiniones") { pintarOpiniones(pestanas, conectarPestanas); return; }
 
   const cuenta = (e) => estado.todas.filter((i) => i.estado === e).length;
   const filtros = [
     ["pendiente_aprobacion", "Por revisar"], ["pendiente_pago", "Esperando pago"],
     ["aprobada", "Aprobadas"], ["rechazada", "Rechazadas"], ["todas", "Todas"],
   ];
-  const lista = estado.todas.filter((i) => estado.filtro === "todas" || i.estado === estado.filtro);
 
   app.innerHTML = `
     <section class="campus__bienvenida">
@@ -817,48 +912,170 @@ function pintarPanel() {
       <p>${cuenta("pendiente_aprobacion") ? `Tenés <strong>${cuenta("pendiente_aprobacion")}</strong> comprobante${cuenta("pendiente_aprobacion") === 1 ? "" : "s"} para revisar.` : "No hay comprobantes para revisar."}</p>
     </section>
     ${pestanas}
+    <div class="panel__herramientas">
+      <label class="panel__buscar"><span class="sr-only">Buscar</span>
+        <input type="search" data-buscar placeholder="Buscar por nombre, mail o código" value="${esc(estado.busqueda)}" /></label>
+      <button class="btn btn--chico btn--linea" type="button" data-exportar>Descargar para Excel</button>
+    </div>
     <div class="panel__filtros">
       ${filtros.map(([v, t]) => `<button type="button" data-filtro="${v}" aria-pressed="${estado.filtro === v}">${t}${v !== "todas" ? ` <span>${cuenta(v)}</span>` : ""}</button>`).join("")}
     </div>
+    <div class="panel__lista" id="panel-lista"></div>`;
+
+  conectarPestanas();
+  app.querySelectorAll("[data-filtro]").forEach((b) => b.addEventListener("click", () => { estado.filtro = b.dataset.filtro; pintarPanel(); }));
+  app.querySelector("[data-buscar]").addEventListener("input", (e) => { estado.busqueda = e.target.value; pintarListaPanel(); });
+  app.querySelector("[data-exportar]").addEventListener("click", exportarInscripciones);
+  pintarListaPanel();
+}
+
+let cortarOpiniones = null;
+
+function pintarOpiniones(pestanas, conectarPestanas) {
+  if (!cortarOpiniones) {
+    cortarOpiniones = onSnapshot(collection(db, "opiniones"), (snap) => {
+      estado.opiniones = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.actualizada?.seconds || 0) - (a.actualizada?.seconds || 0));
+      if (estado.vista === "panel" && estado.panelPestana === "opiniones") pintarPanel();
+    });
+  }
+  const estrellas = (n) => "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n);
+  const publicadas = estado.opiniones.filter((o) => o.publicada).length;
+  app.innerHTML = `
+    <section class="campus__bienvenida">
+      <p class="rotulo">Panel de Jessica</p>
+      <h1>Opiniones</h1>
+      <p>Las que publiques aparecen en la página principal. Solo se pueden publicar las de quienes dieron permiso. Publicadas: <strong>${publicadas}</strong>.</p>
+    </section>
+    ${pestanas}
     <div class="panel__lista">
-      ${lista.length ? lista.map((i) => {
-        const c = cursoPorId(i.curso);
-        const e = ESTADOS[i.estado] || ESTADOS.pendiente_pago;
-        const tieneImagen = typeof i.comprobante === "string" && i.comprobante.startsWith("data:image/");
+      ${estado.opiniones.length ? estado.opiniones.map((o) => {
+        const c = cursoPorId(o.curso);
         return `
-        <article class="solicitud">
-          <div class="solicitud__datos">
-            <span class="estado estado--${e.clase}">${e.texto}</span>
-            <h3>${esc(i.nombre)}</h3>
-            <p>${esc(i.email)}</p>
-            <p><strong>${esc(c ? c.titulo : i.curso)}</strong> · ${esc(c ? c.precio : "")}</p>
-            <p>Código <strong>${esc(i.codigo)}</strong> · ${esc(fecha(i.actualizada))}</p>
-            ${i.nota ? `<p class="solicitud__nota">Nota: ${esc(i.nota)}</p>` : ""}
+        <article class="opinion-panel">
+          <div>
+            <p class="opinion-panel__estrellas" aria-label="${o.estrellas} de 5">${estrellas(o.estrellas)}</p>
+            <p class="opinion-panel__texto">${o.comentario ? esc(o.comentario) : "<em>Sin comentario</em>"}</p>
+            <p class="opinion-panel__autor">${esc(o.nombre)} · ${esc(c ? c.titulo : o.curso)} · ${esc(fecha(o.actualizada))}</p>
+            <p class="opinion-panel__permiso">${o.autoriza ? "Dio permiso para mostrarla" : "No dio permiso para mostrarla"}</p>
           </div>
-          ${tieneImagen ? `<button class="solicitud__comprobante" type="button" data-ver="${esc(i.id)}"><img src="${i.comprobante}" alt="Comprobante de ${esc(i.nombre)}" /></button>`
-            : `<p class="solicitud__sin">Sin comprobante</p>`}
           <div class="solicitud__acciones">
-            ${i.estado !== "aprobada" ? `<button class="btn btn--chico" type="button" data-aprobar="${esc(i.id)}">Aprobar</button>` : ""}
-            ${i.estado !== "rechazada" && i.estado !== "aprobada" ? `<button class="btn btn--chico btn--linea" type="button" data-rechazar="${esc(i.id)}">Rechazar</button>` : ""}
+            ${o.publicada
+              ? `<span class="estado estado--aprobada">En la página</span><button class="btn btn--chico btn--linea" type="button" data-publicar="${esc(o.id)}" data-valor="no">Quitar de la página</button>`
+              : o.autoriza ? `<button class="btn btn--chico" type="button" data-publicar="${esc(o.id)}" data-valor="si">Publicar</button>` : ""}
           </div>
         </article>`;
-      }).join("") : `<p class="campus__aviso">No hay inscripciones en esta lista.</p>`}
+      }).join("") : `<p class="campus__aviso">Todavía no hay opiniones. Aparecen cuando alguien termina un curso y la deja.</p>`}
     </div>`;
+  conectarPestanas();
+  app.querySelectorAll("[data-publicar]").forEach((b) => b.addEventListener("click", async () => {
+    b.disabled = true;
+    try {
+      await updateDoc(doc(db, "opiniones", b.dataset.publicar), { publicada: b.dataset.valor === "si" });
+      mostrarAviso(b.dataset.valor === "si" ? "Opinión publicada en la página." : "Opinión quitada de la página.");
+    } catch { b.disabled = false; mostrarAviso("No se pudo cambiar. Probá de nuevo."); }
+  }));
+}
 
-  app.querySelectorAll("[data-pestana]").forEach((b) => b.addEventListener("click", () => { estado.panelPestana = b.dataset.pestana; pintarPanel(); }));
-  app.querySelectorAll("[data-filtro]").forEach((b) => b.addEventListener("click", () => { estado.filtro = b.dataset.filtro; pintarPanel(); }));
-  app.querySelectorAll("[data-ver]").forEach((b) => b.addEventListener("click", () => {
+function listaFiltrada() {
+  const texto = estado.busqueda.trim().toLowerCase();
+  return estado.todas
+    .filter((i) => estado.filtro === "todas" || i.estado === estado.filtro)
+    .filter((i) => !texto || [i.nombre, i.email, i.codigo].some((v) => String(v || "").toLowerCase().includes(texto)));
+}
+
+function pintarListaPanel() {
+  const contenedor = document.getElementById("panel-lista");
+  if (!contenedor) return;
+  const lista = listaFiltrada();
+  contenedor.innerHTML = lista.length ? lista.map((i) => {
+    const c = cursoPorId(i.curso);
+    const e = ESTADOS[i.estado] || ESTADOS.pendiente_pago;
+    const tieneImagen = typeof i.comprobante === "string" && i.comprobante.startsWith("data:image/");
+    return `
+    <article class="solicitud">
+      <div class="solicitud__datos">
+        <span class="estado estado--${e.clase}">${e.texto}</span>
+        <h3>${esc(i.nombre)}</h3>
+        <p>${esc(i.email)}</p>
+        <p><strong>${esc(c ? c.titulo : i.curso)}</strong> · ${esc(c ? c.precio : "")}</p>
+        <p>Código <strong>${esc(i.codigo)}</strong> · ${esc(fecha(i.actualizada))}</p>
+        ${i.nota ? `<p class="solicitud__nota">Nota: ${esc(i.nota)}</p>` : ""}
+        ${i.estado === "aprobada" ? `<p class="solicitud__avance">${textoAvance(i)}</p>` : ""}
+      </div>
+      ${tieneImagen ? `<button class="solicitud__comprobante" type="button" data-ver="${esc(i.id)}"><img src="${i.comprobante}" alt="Comprobante de ${esc(i.nombre)}" /></button>`
+        : `<p class="solicitud__sin">Sin comprobante</p>`}
+      <div class="solicitud__acciones">
+        ${i.estado !== "aprobada" ? `<button class="btn btn--chico" type="button" data-aprobar="${esc(i.id)}">Aprobar</button>` : ""}
+        ${i.estado !== "rechazada" && i.estado !== "aprobada" ? `<button class="btn btn--chico btn--linea" type="button" data-rechazar="${esc(i.id)}">Rechazar</button>` : ""}
+      </div>
+    </article>`;
+  }).join("") : `<p class="campus__aviso">${estado.busqueda.trim() ? "No hay resultados para esa búsqueda." : "No hay inscripciones en esta lista."}</p>`;
+
+  contenedor.querySelectorAll("[data-ver]").forEach((b) => b.addEventListener("click", () => {
     const i = estado.todas.find((x) => x.id === b.dataset.ver);
     abrirVentana(`<p class="rotulo">Comprobante</p><h2 id="ventana-titulo">${esc(i.nombre)} · ${esc(i.codigo)}</h2><img class="comprobante-grande" src="${i.comprobante}" alt="Comprobante" />`);
   }));
-  app.querySelectorAll("[data-aprobar]").forEach((b) => b.addEventListener("click", async () => {
+  contenedor.querySelectorAll("[data-aprobar]").forEach((b) => b.addEventListener("click", async () => {
     b.disabled = true;
     try {
       await updateDoc(doc(db, "inscripciones", b.dataset.aprobar), { estado: "aprobada", nota: "", actualizada: serverTimestamp() });
       mostrarAviso("Inscripción aprobada: ya puede cursar.");
     } catch { b.disabled = false; mostrarAviso("No se pudo aprobar. Probá de nuevo."); }
   }));
-  app.querySelectorAll("[data-rechazar]").forEach((b) => b.addEventListener("click", () => ventanaRechazo(b.dataset.rechazar)));
+  contenedor.querySelectorAll("[data-rechazar]").forEach((b) => b.addEventListener("click", () => ventanaRechazo(b.dataset.rechazar)));
+  cargarProgresos(lista.filter((i) => i.estado === "aprobada"));
+}
+
+/* Avance de cada alumno aprobado (se lee una vez y queda guardado mientras el panel está abierto). */
+const progresos = {};
+
+function textoAvance(i) {
+  const p = progresos[i.id];
+  if (p === undefined) return "Cargando avance…";
+  const c = cursoPorId(i.curso);
+  const total = c ? c.modulos.length : 0;
+  if (!p) return "Todavía no empezó el curso.";
+  const vistos = (p.vistos || []).length;
+  const evaluaciones = Object.values(p.evaluaciones || {});
+  const aciertos = evaluaciones.reduce((a, b) => a + Number(b || 0), 0);
+  return `${vistos >= total ? "✓ Terminó el curso" : `Avance: ${vistos} de ${total} módulos`}`
+    + (evaluaciones.length
+      ? ` · Autoevaluación: ${evaluaciones.length} ${evaluaciones.length === 1 ? "módulo" : "módulos"}, ${aciertos} ${aciertos === 1 ? "respuesta correcta" : "respuestas correctas"}`
+      : "");
+}
+
+async function cargarProgresos(aprobadas) {
+  const faltan = aprobadas.filter((i) => progresos[i.id] === undefined);
+  if (!faltan.length) return;
+  await Promise.all(faltan.map(async (i) => {
+    try {
+      const snap = await getDoc(doc(db, "progreso", i.uid, "cursos", i.curso));
+      progresos[i.id] = snap.exists() ? snap.data() : null;
+    } catch { progresos[i.id] = null; }
+  }));
+  pintarListaPanel();
+}
+
+// Planilla para Excel: separada por punto y coma y con BOM para que respete los acentos.
+function exportarInscripciones() {
+  const celda = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const filas = [["Fecha", "Nombre", "Mail", "Curso", "Precio", "Código", "Estado", "Nota"]];
+  listaFiltrada().forEach((i) => {
+    const c = cursoPorId(i.curso);
+    const f = i.actualizada && i.actualizada.toDate
+      ? i.actualizada.toDate().toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+      : "";
+    filas.push([f, i.nombre, i.email, c ? c.titulo : i.curso, c ? c.precio : "", i.codigo, (ESTADOS[i.estado] || {}).texto || i.estado, i.nota || ""]);
+  });
+  const csv = "﻿" + filas.map((fila) => fila.map(celda).join(";")).join("\r\n");
+  const enlace = document.createElement("a");
+  enlace.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  enlace.download = `inscripciones-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(enlace);
+  enlace.click();
+  enlace.remove();
+  setTimeout(() => URL.revokeObjectURL(enlace.href), 1000);
 }
 
 function ventanaRechazo(id) {

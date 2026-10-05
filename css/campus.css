@@ -209,6 +209,10 @@
   font-weight: 700;
 }
 .revision .programa__pie { display: flex; justify-content: center; }
+.revision__acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 8px; }
+.btn--whatsapp { background: #1f9d55; border-color: #1f9d55; }
+.btn--whatsapp:hover { background: #188049; }
+.campus__detalle a { font-weight: 600; }
 
 /* Lector */
 .lector {
@@ -406,6 +410,20 @@
   #impresion .certificado { width: 297mm; height: 209mm; padding: 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
+.clase__fin-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* Opinión */
+.estrellas { border: 0; padding: 0; margin: 0 0 16px; }
+.estrellas legend { padding: 0; font-size: 0.85rem; font-weight: 600; color: var(--marino); margin-bottom: 6px; }
+.estrellas__fila { display: inline-flex; flex-direction: row-reverse; gap: 4px; }
+.estrellas input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.estrellas label { font-size: 2.2rem; line-height: 1; color: #d5dbe4; cursor: pointer; transition: color 120ms ease; }
+.estrellas label:hover, .estrellas label:hover ~ label,
+.estrellas input:checked ~ label { color: var(--dorado); }
+.estrellas input:focus-visible + label { outline: 3px solid var(--celeste); border-radius: 4px; }
+.opinion__permiso { display: flex; gap: 10px; align-items: flex-start; font-size: 0.92rem; margin-bottom: 8px; cursor: pointer; }
+.opinion__permiso input { margin-top: 4px; accent-color: var(--marino); }
+
 /* Panel */
 .panel__pestanas { display: flex; gap: 8px; border-bottom: 1px solid var(--linea); margin-bottom: 20px; }
 .panel__pestanas button {
@@ -420,6 +438,33 @@
   cursor: pointer;
 }
 .panel__pestanas button[aria-selected="true"] { color: var(--marino); border-bottom-color: var(--dorado); }
+.panel__herramientas { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.panel__buscar { flex: 1; min-width: 220px; max-width: 420px; }
+.panel__buscar input {
+  width: 100%;
+  font: inherit;
+  padding: 10px 14px;
+  border: 1px solid rgba(29, 53, 87, 0.25);
+  border-radius: 999px;
+  background: #fff;
+}
+.panel__buscar input:focus { outline: 3px solid var(--celeste); border-color: var(--marino-alt); }
+.solicitud__avance { margin-top: 6px !important; color: var(--verde) !important; font-weight: 600; }
+.opinion-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+  padding: 18px 20px;
+  border: 1px solid var(--linea);
+  border-radius: 14px;
+  background: #fff;
+}
+.opinion-panel p { margin: 0 0 4px; }
+.opinion-panel__estrellas { color: var(--dorado); font-size: 1.2rem; letter-spacing: 2px; }
+.opinion-panel__texto { font-size: 1rem; }
+.opinion-panel__autor, .opinion-panel__permiso { font-size: 0.85rem; color: var(--tinta-tenue); }
+.opinion-panel .solicitud__acciones { align-items: flex-end; }
 .panel__filtros { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
 .panel__filtros button {
   font: inherit;
