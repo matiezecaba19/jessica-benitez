@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Campus · Jessica Benitez, Psicopedagoga</title>
+  <meta name="description" content="Campus de cursos online de Jessica Benitez, psicopedagoga: inscribite, pagá y cursá desde acá." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="assets/logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/estilos.css" />
+  <link rel="stylesheet" href="css/campus.css" />
+</head>
+<body class="campus">
+
+  <header class="cabecera">
+    <div class="contenedor cabecera__fila">
+      <a class="marca" href="index.html" aria-label="Volver a la página de Jessica Benitez">
+        <img src="assets/logo.png" alt="" width="44" height="44" />
+        <span>Campus</span>
+      </a>
+      <div class="campus__usuario" id="usuario-barra"></div>
+    </div>
+  </header>
+
+  <main class="contenedor campus__main" id="app">
+    <p class="campus__aviso">Cargando el campus…</p>
+  </main>
+
+  <dialog class="programa ventana" id="ventana" aria-labelledby="ventana-titulo">
+    <button class="programa__cerrar" type="button" aria-label="Cerrar">✕</button>
+    <div class="programa__contenido" id="ventana-contenido"></div>
+  </dialog>
+
+  <div class="aviso-flotante" id="aviso" role="status" aria-live="polite" hidden></div>
+
+  <footer class="pie pie--campus">
+    <div class="contenedor pie__legal">
+      <p>© 2026 Jessica Benitez · Psicopedagoga · M.P. 1007 · <a href="index.html">Volver a la página</a></p>
+    </div>
+  </footer>
+
+  <script src="js/datos-cursos.js"></script>
+  <script type="module" src="js/campus.js"></script>
+</body>
+</html>

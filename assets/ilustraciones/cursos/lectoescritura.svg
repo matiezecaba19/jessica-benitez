@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200">
+  <rect width="400" height="200" fill="#eaf1fb"/>
+  <g fill="#e3a83e"><path d="M52 40l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path d="M352 46l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/><path d="M340 150l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></g>
+  <rect x="60" y="172" width="280" height="8" rx="4" fill="#1d3557"/>
+  <path d="M92 122l12-12h50l-12 12z" fill="#cfe0fa"/>
+  <path d="M142 122l12-12v50l-12 12z" fill="#7fa9e0"/>
+  <rect x="92" y="122" width="50" height="50" fill="#a9c8f5"/>
+  <text x="117" y="158" font-family="Georgia, serif" font-size="32" font-weight="700" fill="#1d3557" text-anchor="middle">A</text>
+  <path d="M154 122l12-12h50l-12 12z" fill="#f0c879"/>
+  <path d="M204 122l12-12v50l-12 12z" fill="#c48a24"/>
+  <rect x="154" y="122" width="50" height="50" fill="#e3a83e"/>
+  <text x="179" y="158" font-family="Georgia, serif" font-size="32" font-weight="700" fill="#1d3557" text-anchor="middle">b</text>
+  <path d="M122 60l12-12h50l-12 12z" fill="#79c3b1"/>
+  <path d="M172 60l12-12v50l-12 12z" fill="#2d7b69"/>
+  <rect x="122" y="60" width="50" height="50" fill="#3e9c86"/>
+  <text x="147" y="96" font-family="Georgia, serif" font-size="32" font-weight="700" fill="#1d3557" text-anchor="middle">c</text>
+  <rect x="236" y="62" width="104" height="70" rx="18" fill="#fff" stroke="#1d3557" stroke-width="3"/>
+  <path d="M258 130l-6 22 24-20" fill="#fff" stroke="#1d3557" stroke-width="3" stroke-linejoin="round"/>
+  <rect x="254" y="128" width="26" height="6" fill="#fff"/>
+  <text x="288" y="106" font-family="Georgia, serif" font-size="26" font-style="italic" fill="#1d3557" text-anchor="middle">ma-má</text>
+  <g transform="rotate(-30 300 160)"><rect x="262" y="154" width="62" height="12" rx="2" fill="#e3a83e"/><rect x="252" y="154" width="10" height="12" rx="2" fill="#e98a8a"/><path d="M324 154l14 6-14 6z" fill="#f6dfb0"/><path d="M332 157.4l6 2.6-6 2.6z" fill="#1d3557"/></g>
+</svg>

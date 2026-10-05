@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <ellipse cx="200" cy="165" rx="185" ry="125" fill="#eaf1fb"/>
+  <g fill="#e3a83e">
+    <path d="M78 70l5 13 13 5-13 5-5 13-5-13-13-5 13-5z"/>
+    <path d="M330 52l4 9 9 4-9 4-4 9-4-9-9-4 9-4z"/>
+    <path d="M345 140l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/>
+  </g>
+  <g stroke="#e3a83e" stroke-width="4" stroke-linecap="round">
+    <line x1="200" y1="28" x2="200" y2="40"/>
+    <line x1="160" y1="45" x2="168" y2="54"/>
+    <line x1="240" y1="45" x2="232" y2="54"/>
+    <line x1="148" y1="86" x2="160" y2="86"/>
+    <line x1="252" y1="86" x2="240" y2="86"/>
+  </g>
+  <circle cx="200" cy="86" r="26" fill="#fff" stroke="#1d3557" stroke-width="4"/>
+  <path d="M191 92q9-14 18 0" fill="none" stroke="#e3a83e" stroke-width="4" stroke-linecap="round"/>
+  <rect x="189" y="111" width="22" height="9" rx="2" fill="#1d3557"/>
+  <rect x="192" y="122" width="16" height="6" rx="3" fill="#1d3557"/>
+  <path d="M92 226c38-10 78-8 108 4 30-12 70-14 108-4v8H92z" fill="#3e9c86"/>
+  <path d="M200 224c-30-12-70-12-100-4v-62c30-8 70-8 100 4z" fill="#fff" stroke="#1d3557" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M200 224c30-12 70-12 100-4v-62c-30-8-70-8-100 4z" fill="#fff" stroke="#1d3557" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="none" stroke="#a9c8f5" stroke-width="4" stroke-linecap="round">
+    <path d="M116 180c22-5 46-5 68 1"/><path d="M116 196c22-5 46-5 68 1"/><path d="M116 212c16-4 34-4 50 0"/>
+    <path d="M216 181c22-6 46-6 68-1"/><path d="M216 197c22-6 46-6 68-1"/><path d="M216 213c16-4 34-4 50-1"/>
+  </g>
+  <rect x="40" y="232" width="320" height="10" rx="5" fill="#1d3557"/>
+  <rect x="44" y="194" width="36" height="38" rx="5" fill="#a9c8f5"/>
+  <text x="62" y="222" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#1d3557" text-anchor="middle">A</text>
+  <rect x="52" y="158" width="32" height="36" rx="5" fill="#e3a83e"/>
+  <text x="68" y="184" font-family="Georgia, serif" font-size="22" font-weight="700" fill="#1d3557" text-anchor="middle">b</text>
+  <g transform="rotate(-32 335 214)">
+    <rect x="300" y="208" width="66" height="13" rx="2" fill="#e3a83e"/>
+    <rect x="290" y="208" width="10" height="13" rx="2" fill="#e98a8a"/>
+    <path d="M366 208l15 6.5-15 6.5z" fill="#f6dfb0"/>
+    <path d="M375 211.6l6 2.9-6 2.9z" fill="#1d3557"/>
+  </g>
+</svg>

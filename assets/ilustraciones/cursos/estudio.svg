@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200">
+  <rect width="400" height="200" fill="#eaf1fb"/>
+  <g fill="#e3a83e"><path d="M52 40l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path d="M352 46l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/><path d="M340 150l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></g>
+  <rect x="96" y="44" width="128" height="132" rx="10" fill="#fff" stroke="#1d3557" stroke-width="3"/>
+  <path d="M96 54a10 10 0 0 1 10-10h108a10 10 0 0 1 10 10v20H96z" fill="#1d3557"/>
+  <rect x="122" y="34" width="8" height="22" rx="4" fill="#24466b"/><rect x="190" y="34" width="8" height="22" rx="4" fill="#24466b"/>
+  <g fill="#a9c8f5">
+    <circle cx="118" cy="96" r="6"/><circle cx="142" cy="96" r="6"/><circle cx="166" cy="96" r="6"/><circle cx="190" cy="96" r="6"/><circle cx="208" cy="96" r="6"/>
+    <circle cx="118" cy="122" r="6"/><circle cx="142" cy="122" r="6"/><circle cx="190" cy="122" r="6"/><circle cx="208" cy="122" r="6"/>
+    <circle cx="118" cy="148" r="6"/><circle cx="142" cy="148" r="6"/><circle cx="166" cy="148" r="6"/><circle cx="190" cy="148" r="6"/>
+  </g>
+  <circle cx="166" cy="122" r="12" fill="#e3a83e"/>
+  <g transform="rotate(5 300 110)">
+    <rect x="252" y="50" width="96" height="120" rx="8" fill="#fff" stroke="#1d3557" stroke-width="3"/>
+    <g fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="266" y="70" width="16" height="16" rx="3" stroke="#1d3557" stroke-width="2.5"/><path d="M269 78l4 4 8-9" stroke="#3e9c86"/>
+      <rect x="266" y="102" width="16" height="16" rx="3" stroke="#1d3557" stroke-width="2.5"/><path d="M269 110l4 4 8-9" stroke="#3e9c86"/>
+      <rect x="266" y="134" width="16" height="16" rx="3" stroke="#1d3557" stroke-width="2.5"/>
+      <path d="M292 78h40M292 110h34M292 142h38" stroke="#a9c8f5"/>
+    </g>
+  </g>
+  <g transform="rotate(-40 80 150)"><rect x="40" y="143" width="70" height="16" rx="4" fill="#3e9c86"/><rect x="34" y="145" width="8" height="12" rx="2" fill="#2d7b69"/><path d="M110 143l14 3v10l-14 3z" fill="#79c3b1"/></g>
+</svg>
