@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200">
+  <rect width="400" height="200" fill="#eaf1fb"/>
+  <g fill="#e3a83e"><path d="M46 36l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path d="M356 40l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/><path d="M60 150l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></g>
+  <!-- Pizarrón -->
+  <rect x="110" y="22" width="180" height="76" rx="8" fill="#1d3557"/>
+  <g stroke="#a9c8f5" stroke-width="5" stroke-linecap="round">
+    <line x1="130" y1="44" x2="196" y2="44"/>
+    <line x1="130" y1="62" x2="180" y2="62"/>
+    <line x1="130" y1="80" x2="190" y2="80"/>
+  </g>
+  <!-- Tres caminos hacia la misma meta (DUA: varias formas) -->
+  <g fill="none" stroke-width="4" stroke-linecap="round">
+    <path d="M216 80 Q236 40 266 46" stroke="#3e9c86"/>
+    <path d="M216 80 L266 62" stroke="#e3a83e"/>
+    <path d="M216 80 Q240 96 266 78" stroke="#a9c8f5"/>
+  </g>
+  <circle cx="270" cy="62" r="8" fill="#ffffff"/>
+  <!-- Mesa -->
+  <rect x="70" y="160" width="260" height="10" rx="5" fill="#1d3557"/>
+  <!-- Personas alrededor -->
+  <g>
+    <circle cx="110" cy="122" r="14" fill="#e3a83e"/>
+    <path d="M90 160c0-18 9-24 20-24s20 6 20 24z" fill="#3e9c86"/>
+  </g>
+  <g>
+    <circle cx="170" cy="126" r="12" fill="#c98a5a"/>
+    <path d="M153 160c0-16 8-21 17-21s17 5 17 21z" fill="#e3a83e"/>
+  </g>
+  <!-- Estudiante en silla de ruedas -->
+  <g>
+    <circle cx="232" cy="122" r="13" fill="#8a5a3c"/>
+    <path d="M216 156c0-14 7-20 16-20s16 6 16 20z" fill="#a9c8f5"/>
+    <circle cx="232" cy="172" r="18" fill="none" stroke="#1d3557" stroke-width="5"/>
+    <circle cx="232" cy="172" r="4" fill="#1d3557"/>
+  </g>
+  <g>
+    <circle cx="294" cy="120" r="14" fill="#f0c9a0"/>
+    <path d="M274 160c0-18 9-24 20-24s20 6 20 24z" fill="#1d3557"/>
+  </g>
+</svg>

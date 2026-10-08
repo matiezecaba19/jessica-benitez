@@ -4,6 +4,8 @@
   "use strict";
 
   const { WHATSAPP, INCLUYE, CURSOS, duracion } = window.DATOS_CURSOS;
+  // Los cursos retirados ya no se ofrecen (siguen en los datos para quienes los cursaron).
+  const VISIBLES = CURSOS.filter((c) => !c.retirado);
 
   // La inscripción y el pago se hacen en el campus.
   function enlaceInscripcion(curso) {
@@ -95,12 +97,12 @@
         <a class="btn btn--chico" href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent("Hola Jessica, quiero consultarte por un taller o capacitación.")}" target="_blank" rel="noopener">Consultar</a>
       </article>`;
 
-  lista.innerHTML = CURSOS.map(ficha).join("") + otroTema;
+  lista.innerHTML = VISIBLES.map(ficha).join("") + otroTema;
 
   lista.addEventListener("click", (e) => {
     const boton = e.target.closest("[data-programa]");
     if (!boton) return;
-    contenido.innerHTML = programa(CURSOS[Number(boton.dataset.programa)]);
+    contenido.innerHTML = programa(VISIBLES[Number(boton.dataset.programa)]);
     dialogo.showModal();
     contenido.scrollTop = 0;
   });

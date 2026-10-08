@@ -23,6 +23,9 @@ window.DATOS_CURSOS = (function () {
       // Para cerrar temporalmente la inscripción (se muestra el curso, pero sin precio ni botón de inscripción),
       // agregar acá la línea:  proximamente: true,
       horas: 136,
+      // Termina con un trabajo final: la alumna lo entrega en PDF, Jessica lo corrige con nota y el certificado exige que esté
+      // aprobado. Tiene que coincidir con tieneTrabajoFinal() en firestore.rules.
+      trabajoFinal: true,
       para: "Psicopedagogas y psicopedagogos recibidos",
       resumen: "Formación avanzada para quienes ya se recibieron: razonamiento clínico, marco ético y legal, evaluación de la lectura, la escritura, la matemática y las funciones ejecutivas, informes y devoluciones, intervención basada en la evidencia y trabajo con escuelas y familias.",
       precio: "$ 60.000",
@@ -56,8 +59,85 @@ window.DATOS_CURSOS = (function () {
       ],
     },
     {
+      titulo: "Educación Inclusiva y Trayectorias Escolares: Apoyos, Diseño Universal y Trabajo con Equipos Docentes",
+      id: "inclusion",
+      // Inscripción cerrada hasta definir el precio (y, si lo tiene, el aval). Para abrirla: borrar esta línea y completar el precio.
+      proximamente: true,
+      horas: 113,
+      trabajoFinal: true,
+      para: "Psicopedagogas y psicopedagogos recibidos",
+      resumen: "Para acompañar procesos de inclusión en la escuela: marco normativo, trayectorias escolares, Diseño Universal para el Aprendizaje, configuraciones de apoyo y proyectos pedagógicos individuales, evaluación inclusiva y trabajo con equipos docentes y familias.",
+      precio: "A confirmar",
+      semanas: 14,
+      objetivos: [
+        "Fundamentar las intervenciones en el modelo social de la discapacidad y en la normativa internacional, nacional y provincial.",
+        "Analizar trayectorias escolares reales e identificar barreras para el aprendizaje y la participación.",
+        "Diseñar ajustes desde el Diseño Universal para el Aprendizaje, configuraciones de apoyo y proyectos pedagógicos individuales con evaluación coherente.",
+        "Trabajar con equipos docentes, de apoyo, familias y comunidad, con roles y acuerdos claros, y hacer el seguimiento de los apoyos.",
+      ],
+      incluye: [
+        "Material de estudio de cada módulo, con casos para analizar",
+        "Actividades prácticas y autoevaluación en cada módulo",
+        "Trabajo final integrador",
+        "Consultas con Jessica por WhatsApp o mail",
+        "Constancia de finalización en el campus",
+      ],
+      modulos: [
+        { titulo: "De la integración a la inclusión: conceptos y paradigmas", temas: ["Exclusión, segregación, integración e inclusión", "Del modelo médico al modelo social", "Barreras para el aprendizaje y la participación"] },
+        { titulo: "Marco normativo de la educación inclusiva", temas: ["Normas internacionales con jerarquía constitucional", "Normas nacionales y del Consejo Federal de Educación", "La normativa provincial y su aplicación en la práctica"] },
+        { titulo: "Trayectorias escolares: teóricas y reales", temas: ["Trayectorias teóricas y reales", "Repitencia, sobreedad, ausentismo y abandono", "Alerta temprana y acompañamiento de trayectorias"] },
+        { titulo: "Diseño Universal para el Aprendizaje en el aula", temas: ["Los tres principios del DUA", "Analizar una planificación con el DUA", "Cambios sencillos para toda la clase"] },
+        { titulo: "Configuraciones de apoyo, ajustes razonables y proyectos pedagógicos individuales", temas: ["Configuraciones de apoyo", "Ajustes de acceso y adecuaciones de contenido", "El proyecto pedagógico individual"] },
+        { titulo: "Evaluar en la escuela inclusiva", temas: ["Evaluación formativa y principios de una evaluación inclusiva", "Rúbricas y retroalimentación", "Acreditación, promoción y certificación"] },
+        { titulo: "Roles en la inclusión: equipos de orientación, docentes de apoyo y acompañantes", temas: ["Los actores y sus funciones", "Demanda y encargo", "Riesgos frecuentes y acuerdos de trabajo"] },
+        { titulo: "Estrategias para estudiantes con discapacidad y neurodivergencias", temas: ["Autismo y discapacidad intelectual", "Discapacidad sensorial y motora", "Comunicación aumentativa y alternativa"] },
+        { titulo: "Familias, comunidad y transiciones", temas: ["La familia como aliada", "Recursos de la comunidad", "Transiciones entre niveles y hacia la vida adulta"] },
+        { titulo: "Seguimiento de trayectorias, documentación y trabajo final integrador", temas: ["Indicadores de participación, aprendizaje y bienestar", "Documentar sin burocratizar y evaluar los apoyos", "Trabajo final integrador"] },
+      ],
+    },
+    {
+      titulo: "Psicopedagogía en la Primera Infancia: Desarrollo, Detección Temprana y Estimulación",
+      id: "infancia",
+      // Inscripción cerrada hasta definir el precio (y, si lo tiene, el aval). Para abrirla: borrar esta línea y completar el precio.
+      proximamente: true,
+      horas: 113,
+      trabajoFinal: true,
+      para: "Psicopedagogas y psicopedagogos recibidos",
+      resumen: "Para trabajar con niñas y niños de 0 a 6 años, sus familias y los jardines: desarrollo por áreas, señales de alerta y detección temprana, evaluación en el nivel inicial, intervención centrada en la familia, transición a la primaria y trabajo interdisciplinario.",
+      precio: "A confirmar",
+      semanas: 14,
+      objetivos: [
+        "Reconocer el desarrollo esperable de 0 a 6 años en las áreas motora, comunicativa, cognitiva y socioemocional, y el lugar del juego.",
+        "Identificar señales de alerta y usar con criterio herramientas de pesquisa y evaluación adecuadas a la edad.",
+        "Diseñar intervenciones tempranas centradas en la familia y basadas en las rutinas, con objetivos funcionales.",
+        "Articular con jardines, pediatría y otros profesionales, y acompañar la transición a la escuela primaria.",
+      ],
+      incluye: [
+        "Material de estudio de cada módulo, con casos para analizar",
+        "Actividades prácticas y autoevaluación en cada módulo",
+        "Trabajo final integrador",
+        "Consultas con Jessica por WhatsApp o mail",
+        "Constancia de finalización en el campus",
+      ],
+      modulos: [
+        { titulo: "La primera infancia: desarrollo, vínculos y ambiente", temas: ["Un período sensible", "El vínculo de apego y la co-regulación", "Factores que favorecen u obstaculizan el desarrollo"] },
+        { titulo: "Desarrollo motor, sensorial y del juego", temas: ["Cómo leer los hitos del desarrollo", "Motricidad gruesa, fina y procesamiento sensorial", "El juego: de explorar a simbolizar"] },
+        { titulo: "Desarrollo de la comunicación y el lenguaje", temas: ["Antes de las palabras", "De las primeras palabras a las frases", "Componentes a observar y bilingüismo"] },
+        { titulo: "Desarrollo cognitivo, socioemocional y regulación", temas: ["El pensamiento en los primeros años", "Desarrollo socioemocional", "Berrinches, límites y cuándo prestar atención"] },
+        { titulo: "Señales de alerta y detección temprana", temas: ["Pesquisa, evaluación y diagnóstico", "Señales de alerta que piden consulta sin demora", "Herramientas de pesquisa y cómo comunicar la preocupación"] },
+        { titulo: "Evaluación psicopedagógica en el nivel inicial", temas: ["Observación del juego", "Entrevistas a familias y jardines", "Coordinación con pediatría y devolución"] },
+        { titulo: "Estimulación e intervención temprana", temas: ["Intervención centrada en la familia y en entornos naturales", "Estrategias en las rutinas diarias", "Objetivos funcionales"] },
+        { titulo: "Trabajo con familias y jardines", temas: ["Acompañar la crianza cotidiana", "Pantallas en la primera infancia", "Articulación con el jardín y talleres para familias"] },
+        { titulo: "Transición a la primaria y bases de la alfabetización", temas: ["La transición como proceso", "Alfabetización emergente y conciencia fonológica", "Indicadores para seguir en primer grado"] },
+        { titulo: "Interdisciplina, derivación, seguimiento y trabajo final integrador", temas: ["Trabajo interdisciplinario y derivación", "Seguimiento y marco de derechos", "Trabajo final integrador"] },
+      ],
+    },
+    // Cursos anteriores: ya no se ofrecen (retirado: true los oculta de la página y del campus), pero se mantienen
+    // para que quienes los cursaron sigan viendo sus clases y sus certificados.
+    {
       titulo: "Fundamentos de la Psicopedagogía",
       id: "fundamentos",
+      retirado: true,
       para: "Estudiantes, docentes y profesionales afines",
       resumen: "Un recorrido introductorio por los conceptos, marcos teóricos y herramientas básicas del acompañamiento psicopedagógico.",
       precio: "$ 15.000",
@@ -78,6 +158,7 @@ window.DATOS_CURSOS = (function () {
     {
       titulo: "Estimulación de la Lectoescritura",
       id: "lectoescritura",
+      retirado: true,
       para: "Docentes de nivel inicial y primario, y familias",
       resumen: "Estrategias prácticas para acompañar el aprendizaje de la lectura y la escritura, con foco en detectar a tiempo las dificultades.",
       precio: "$ 12.500",
@@ -98,6 +179,7 @@ window.DATOS_CURSOS = (function () {
     {
       titulo: "Orientación Vocacional: acompañar la elección",
       id: "orientacion",
+      retirado: true,
       para: "Docentes, familias y colegas que acompañan a adolescentes",
       resumen: "Herramientas para acompañar a adolescentes de los últimos años de la secundaria en la elección de una carrera, un estudio o un oficio.",
       precio: "$ 18.000",
@@ -119,6 +201,7 @@ window.DATOS_CURSOS = (function () {
     {
       titulo: "Técnicas de Estudio para Adolescentes",
       id: "estudio",
+      retirado: true,
       para: "Estudiantes de secundaria y sus familias",
       resumen: "Aprender a organizarse, comprender lo que se lee y preparar exámenes con menos estrés y mejores resultados.",
       precio: "$ 14.000",
@@ -139,6 +222,7 @@ window.DATOS_CURSOS = (function () {
     {
       titulo: "Límites y Hábitos en la Crianza",
       id: "crianza",
+      retirado: true,
       para: "Madres, padres y cuidadores de chicos de 2 a 12 años",
       resumen: "Rutinas, pantallas, emociones y límites: herramientas para acompañar la crianza con más calma y menos gritos.",
       precio: "$ 15.000",

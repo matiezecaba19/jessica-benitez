@@ -2,7 +2,7 @@
    Estrategia: primero la red (así siempre se ve la versión más nueva) y, si no hay internet,
    lo último guardado. Solo guarda archivos de este mismo sitio: Firebase, las tipografías
    y los pagos nunca pasan por acá. Para forzar una actualización, subir el número de VERSION. */
-const VERSION = "v5";
+const VERSION = "v6";
 const CACHE = `jessica-benitez-${VERSION}`;
 
 const BASICOS = [

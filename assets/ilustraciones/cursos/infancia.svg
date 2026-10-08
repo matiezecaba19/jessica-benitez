@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" width="400" height="200">
+  <rect width="400" height="200" fill="#eaf1fb"/>
+  <g fill="#e3a83e"><path d="M48 38l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path d="M350 36l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/><path d="M356 146l3 6 6 3-6 3-3 6-3-6-6-3 6-3z"/></g>
+  <!-- Bloques apilados -->
+  <rect x="90" y="132" width="48" height="48" rx="6" fill="#3e9c86"/>
+  <rect x="142" y="132" width="48" height="48" rx="6" fill="#e3a83e"/>
+  <rect x="116" y="82" width="48" height="48" rx="6" fill="#1d3557"/>
+  <g fill="#ffffff" font-family="Arial, sans-serif" font-weight="700" font-size="28" text-anchor="middle">
+    <text x="114" y="166">A</text>
+    <text x="166" y="166">B</text>
+    <text x="140" y="116">C</text>
+  </g>
+  <!-- Sonajero -->
+  <circle cx="74" cy="80" r="20" fill="#a9c8f5" stroke="#1d3557" stroke-width="4"/>
+  <circle cx="68" cy="74" r="4" fill="#ffffff"/>
+  <line x1="88" y1="94" x2="104" y2="112" stroke="#1d3557" stroke-width="7" stroke-linecap="round"/>
+  <!-- Pelota -->
+  <circle cx="232" cy="160" r="20" fill="#ffffff" stroke="#1d3557" stroke-width="4"/>
+  <path d="M212 160h40M232 140c-8 8-8 32 0 40" fill="none" stroke="#e3a83e" stroke-width="4"/>
+  <!-- Curva de crecimiento con hitos -->
+  <rect x="262" y="50" width="104" height="96" rx="8" fill="#ffffff" stroke="#a9c8f5" stroke-width="3"/>
+  <path d="M274 132 C296 128 312 110 324 92 S348 66 356 62" fill="none" stroke="#3e9c86" stroke-width="5" stroke-linecap="round"/>
+  <g fill="#e3a83e"><circle cx="274" cy="132" r="5"/><circle cx="302" cy="120" r="5"/><circle cx="324" cy="92" r="5"/><circle cx="356" cy="62" r="5"/></g>
+  <!-- Corazón (vínculo) -->
+  <path d="M210 70c-8-14-30-8-24 10 4 10 24 22 24 22s20-12 24-22c6-18-16-24-24-10z" fill="#e07a6b"/>
+</svg>

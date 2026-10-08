@@ -9,13 +9,18 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, setDoc, updateDoc, collection,
-  query, where, orderBy, onSnapshot, serverTimestamp, writeBatch,
+  query, where, orderBy, onSnapshot, serverTimestamp, writeBatch, deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const { CURSOS, ALIAS, WHATSAPP, duracion } = window.DATOS_CURSOS;
 // Solo cambia lo que se muestra; quién es administrador lo deciden las reglas.
 const ADMINS = ["psp.jessicabenitez@gmail.com", "matiezecaba19@gmail.com"];
+
+// Trabajo final: el PDF se guarda partido en trozos de texto dentro de Firestore (así no hace falta Firebase Storage).
+// Estos límites tienen que coincidir con firestore.rules: hasta 6 partes de 700.000 caracteres.
+const MAX_PDF = 3000000;       // bytes
+const TAMANO_PARTE = 700000;   // caracteres de base64 por parte
 
 const ESTADOS = {
   pendiente_pago: { texto: "Falta el pago", clase: "pendiente" },
@@ -188,6 +193,9 @@ const estado = {
   todas: [],
   busqueda: "",
   opiniones: [],
+  misEntregas: [],           // trabajos finales de la persona que entró
+  entregas: [],              // todos los trabajos finales (solo Jessica)
+  filtroTrabajos: "entregada",
   previa: false,             // Jessica viendo un curso "como alumno"
   leidasHasta: 0,            // segundos: hasta cuándo leyó las notificaciones
   notifAbiertas: false,
@@ -196,6 +204,8 @@ const estado = {
 };
 let cortarInscripciones = null;
 let cortarPanel = null;
+let cortarMisEntregas = null;
+let cortarEntregas = null;
 
 onAuthStateChanged(auth, (usuario) => {
   estado.usuario = usuario;
@@ -204,14 +214,18 @@ onAuthStateChanged(auth, (usuario) => {
   if (cortarPanel) { cortarPanel(); cortarPanel = null; }
   if (cortarOpiniones) { cortarOpiniones(); cortarOpiniones = null; }
   if (cortarLeidas) { cortarLeidas(); cortarLeidas = null; }
+  if (cortarMisEntregas) { cortarMisEntregas(); cortarMisEntregas = null; }
+  if (cortarEntregas) { cortarEntregas(); cortarEntregas = null; }
   estado.inscripciones = [];
   estado.todas = [];
   estado.opiniones = [];
+  estado.misEntregas = [];
+  estado.entregas = [];
   estado.vista = "inicio";
   estado.previa = false;
   estado.notifAbiertas = false;
   avisadas = null;
-  cargado = { leidas: false, inscripciones: false, admin: !estado.admin };
+  cargado = { leidas: false, inscripciones: false, admin: !estado.admin, entregas: false, adminEntregas: !estado.admin };
   pintarBarra();
   if (!usuario) {
     pintarIngreso();
@@ -224,6 +238,14 @@ onAuthStateChanged(auth, (usuario) => {
     actualizarNotificaciones();
   }, () => { cargado.leidas = true; });
   if (estado.admin) escucharAdmin();
+  // Los trabajos finales de esta persona: para mostrar su estado y avisarle cuando Jessica los corrige.
+  cortarMisEntregas = onSnapshot(query(collection(db, "entregas"), where("uid", "==", usuario.uid)), (snap) => {
+    const antes = entregaActual() ? entregaActual().estado : null;
+    estado.misEntregas = snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) }));
+    cargado.entregas = true;
+    actualizarNotificaciones();
+    alCambiarEntrega(antes);
+  }, () => { cargado.entregas = true; });
   const q = query(collection(db, "inscripciones"), where("uid", "==", usuario.uid));
   let primera = true;
   cortarInscripciones = onSnapshot(q, (snap) => {
@@ -311,7 +333,26 @@ function listaNotificaciones() {
       });
     }
   }
+  for (const t of estado.misEntregas) {
+    if (!["aprobada", "desaprobada", "devuelta"].includes(t.estado) || !t.calificada) continue;
+    lista.push({
+      id: `trabajo-${t.id}`, fecha: t.calificada, tipo: t.estado === "aprobada" ? "aprobada" : "rechazada",
+      texto: t.estado === "aprobada"
+        ? `Jessica aprobó tu trabajo final de ${titulo(t.curso)}. Nota: ${t.nota}.`
+        : t.estado === "devuelta"
+          ? `Jessica te pidió correcciones en tu trabajo final de ${titulo(t.curso)}.`
+          : `Tu trabajo final de ${titulo(t.curso)} quedó desaprobado. Nota: ${t.nota}.`,
+      accion: () => abrirCurso(t.curso),
+    });
+  }
   if (estado.admin) {
+    for (const t of estado.entregas.filter((x) => x.estado === "entregada")) {
+      lista.push({
+        id: `entrega-${t.id}`, fecha: t.enviada, tipo: "entrega",
+        texto: `${t.nombre} entregó el trabajo final de ${titulo(t.curso)}.`,
+        accion: () => { estado.panelPestana = "trabajos"; estado.filtroTrabajos = "entregada"; abrirPanel(); },
+      });
+    }
     for (const i of estado.todas.filter((x) => x.estado === "pendiente_aprobacion")) {
       lista.push({
         id: `comprobante-${i.id}`, fecha: i.actualizada, tipo: "comprobante",
@@ -346,7 +387,7 @@ function actualizarNotificaciones() {
 
   // Aviso en pantalla cuando llega una nueva mientras la persona está en el campus
   // (las que ya estaban al entrar solo suman al contador).
-  if (cargado.leidas && cargado.inscripciones && cargado.admin) {
+  if (cargado.leidas && cargado.inscripciones && cargado.admin && cargado.entregas && cargado.adminEntregas) {
     const claves = new Set(lista.map((n) => `${n.id}@${n.fecha.seconds}`));
     if (avisadas) {
       const llegada = lista.find((n) => esNueva(n) && !avisadas.has(`${n.id}@${n.fecha.seconds}`));
@@ -361,7 +402,7 @@ function actualizarNotificaciones() {
 function pintarPanelNotificaciones(lista = listaNotificaciones()) {
   const panel = barra.querySelector("[data-notif-panel]");
   if (!panel) return;
-  const iconos = { aprobada: "✓", rechazada: "!", comprobante: "$", opinion: "★" };
+  const iconos = { aprobada: "✓", rechazada: "!", comprobante: "$", opinion: "★", entrega: "▤" };
   panel.innerHTML = `
     <p class="notif__titulo">Notificaciones</p>
     ${lista.length ? `<ul>${lista.map((n) => `
@@ -369,7 +410,7 @@ function pintarPanelNotificaciones(lista = listaNotificaciones()) {
         <span class="notif__icono" aria-hidden="true">${iconos[n.tipo]}</span>
         <span><span class="notif__texto">${esc(n.texto)}</span><span class="notif__fecha">${esc(fecha(n.fecha))}</span></span>
       </button></li>`).join("")}</ul>`
-      : `<p class="notif__vacio">No tenés notificaciones. Acá te vamos a avisar ${estado.admin ? "cuando alguien suba un comprobante o deje una opinión" : "cuando Jessica revise tu pago"}.</p>`}`;
+      : `<p class="notif__vacio">No tenés notificaciones. Acá te vamos a avisar ${estado.admin ? "cuando alguien suba un comprobante, entregue un trabajo o deje una opinión" : "cuando Jessica revise tu pago o corrija tu trabajo final"}.</p>`}`;
 }
 
 function alternarNotificaciones() {
@@ -499,7 +540,7 @@ function pintarInicio() {
     .filter((i) => cursoPorId(i.curso))
     .sort((a, b) => (b.actualizada?.seconds || 0) - (a.actualizada?.seconds || 0));
   const tomados = new Set(mias.map((i) => i.curso));
-  const otros = CURSOS.filter((c) => !tomados.has(c.id));
+  const otros = CURSOS.filter((c) => !c.retirado && !tomados.has(c.id));
   const nombre = (u.displayName || "").split(" ")[0];
 
   app.innerHTML = `
@@ -580,6 +621,7 @@ function confirmarInscripcion(cursoId) {
   const c = cursoPorId(cursoId);
   if (!c) return;
   if (c.proximamente) { mostrarAviso("La inscripción a este curso todavía no está abierta."); return; }
+  if (c.retirado) { mostrarAviso("Este curso ya no se ofrece. Mirá los cursos disponibles en el campus."); return; }
   abrirVentana(`
     <img class="programa__ilustracion" src="assets/ilustraciones/cursos/${c.id}.svg" alt="" width="400" height="200" />
     <p class="rotulo">Inscripción</p>
@@ -797,7 +839,8 @@ function pintarCurso() {
   vistosCurso.add(n);
   guardarProgreso();
   const ultimo = n === modulos.length - 1;
-  const completo = cursoCompleto();
+  const vistosTodos = cursoCompleto();
+  const completo = vistosTodos && trabajoFinalOk();   // en los cursos con trabajo final, también tiene que estar aprobado
   const faltan = modulos.length - vistosCurso.size;
   const preguntas = leerAutoevaluacion(m.autoevaluacion);
   const resultado = estado.progreso.evaluaciones[String(n)];
@@ -819,6 +862,9 @@ function pintarCurso() {
           ${modulos.map((mod, i) => `
             <li><button type="button" data-modulo="${i}" ${i === n ? 'aria-current="step"' : ""} class="${vistosCurso.has(i) ? "visto" : ""}">
               <span>Módulo ${i + 1}</span>${esc(mod.titulo)}</button></li>`).join("")}
+          ${c.trabajoFinal ? `
+            <li><button type="button" data-ir-trabajo class="${entregaActual() && entregaActual().estado === "aprobada" ? "visto" : ""}">
+              <span>Trabajo final</span>${esc(textoEstadoTrabajo())}</button></li>` : ""}
         </ol>
         ${completo ? `<button class="btn btn--chico lector__certificado" type="button" data-certificado>🎓 Mi certificado</button>` : ""}
       </aside>
@@ -843,16 +889,19 @@ function pintarCurso() {
             <button class="btn" type="submit">Comprobar respuestas</button>
             <p class="autoeval__total" role="status" hidden></p>
           </form>` : ""}
+        ${ultimo && c.trabajoFinal ? htmlTrabajoFinal() : ""}
         ${ultimo ? `
           <div class="clase__fin">
-            <h3>${completo ? "¡Terminaste el curso!" : "Llegaste al último módulo"}</h3>
+            <h3>${completo ? "¡Terminaste el curso!" : vistosTodos ? "Ya viste todos los módulos" : "Llegaste al último módulo"}</h3>
             ${completo
               ? `<p>Felicitaciones por llegar hasta acá. Ya podés descargar tu certificado de finalización.</p>
                  <div class="clase__fin-acciones">
                    <button class="btn" type="button" data-certificado>Descargar mi certificado</button>
                    ${estado.previa ? "" : `<button class="btn btn--linea" type="button" data-opinion>Dejar mi opinión</button>`}
                  </div>`
-              : `<p>Para obtener el certificado te ${faltan === 1 ? "falta ver 1 módulo" : `faltan ver ${faltan} módulos`}. Los que ya viste aparecen marcados en verde en el índice.</p>`}
+              : vistosTodos
+                ? `<p>Para obtener el certificado falta que tu trabajo final esté aprobado. Estado: ${esc(textoEstadoTrabajo().toLowerCase())}.</p>`
+                : `<p>Para obtener el certificado te ${faltan === 1 ? "falta ver 1 módulo" : `faltan ver ${faltan} módulos`}. Los que ya viste aparecen marcados en verde en el índice.</p>`}
           </div>` : ""}
         <nav class="lector__nav" aria-label="Cambiar de módulo">
           <button class="btn btn--linea" type="button" data-paso="-1" ${n === 0 ? "disabled" : ""}>← Anterior</button>
@@ -866,6 +915,8 @@ function pintarCurso() {
   app.querySelectorAll("[data-paso]").forEach((b) => b.addEventListener("click", () => irAModulo(n + Number(b.dataset.paso))));
   app.querySelectorAll("[data-certificado]").forEach((b) => b.addEventListener("click", ventanaCertificado));
   app.querySelectorAll("[data-opinion]").forEach((b) => b.addEventListener("click", ventanaOpinion));
+  app.querySelectorAll("[data-ir-trabajo]").forEach((b) => b.addEventListener("click", irAlTrabajoFinal));
+  conectarTrabajo();
 
   const form = app.querySelector("[data-autoeval]");
   if (form) form.addEventListener("submit", (e) => {
@@ -900,6 +951,204 @@ function irAModulo(i) {
   estado.modulo = Math.min(Math.max(i, 0), estado.contenido.length - 1);
   pintarCurso();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* ---------- Trabajo final ---------- */
+
+// La entrega de la persona en el curso que tiene abierto.
+function entregaActual() {
+  const c = estado.cursoAbierto;
+  return (c && estado.misEntregas.find((t) => t.curso === c.id)) || null;
+}
+
+// En los cursos con trabajo final, el certificado exige que esté aprobado (las reglas lo controlan también).
+function trabajoFinalOk() {
+  const c = estado.cursoAbierto;
+  if (!c || !c.trabajoFinal || estado.previa) return true;
+  const e = entregaActual();
+  return !!e && e.estado === "aprobada";
+}
+
+function textoEstadoTrabajo() {
+  const e = entregaActual();
+  if (!e) return "Sin entregar";
+  switch (e.estado) {
+    case "entregada": return "Entregado, en revisión";
+    case "devuelta": return "Con correcciones";
+    case "aprobada": return `Aprobado · nota ${e.nota}`;
+    case "desaprobada": return `Desaprobado · nota ${e.nota}`;
+    default: return "";
+  }
+}
+
+// En megas decimales, como los muestra Windows al elegir un archivo: «3 MB», «2,95 MB», «3,3 MB».
+function formatoTamano(bytes) {
+  if (bytes < 1000000) return `${Math.max(1, Math.round(bytes / 1000))} KB`;
+  return `${(bytes / 1000000).toFixed(2).replace(/\.?0+$/, "").replace(".", ",")} MB`;
+}
+
+function htmlTrabajoFinal() {
+  const c = estado.cursoAbierto;
+  const e = entregaActual();
+  let cuerpo;
+  if (estado.previa) {
+    cuerpo = `<p>Acá cada alumna entrega su trabajo final en PDF y después ve la nota y la devolución de Jessica. En la vista previa no se puede entregar.</p>`;
+  } else {
+    const devolucion = e && e.devolucion ? `<p class="trabajo__devolucion"><strong>Devolución de Jessica:</strong> ${esc(e.devolucion)}</p>` : "";
+    const descargar = e ? `<button class="btn btn--chico btn--linea" type="button" data-descargar-entrega>Descargar mi entrega</button>` : "";
+    const formulario = (texto) => `
+      <p>${texto}</p>
+      <form class="trabajo__form" data-trabajo-form>
+        <label class="campo"><span>Tu trabajo en PDF (hasta ${formatoTamano(MAX_PDF)})</span>
+          <input type="file" accept="application/pdf,.pdf" data-trabajo-archivo /></label>
+        <p class="acceso__error" role="alert" data-trabajo-error></p>
+        <button class="btn" type="submit">Entregar trabajo</button>
+      </form>`;
+    if (!e && !cursoCompleto()) {
+      cuerpo = `<p>Vas a poder entregar tu trabajo final cuando hayas visto todos los módulos. Seguí la consigna que está más arriba, en este módulo, y entregalo en un único archivo PDF.</p>`;
+    } else if (!e) {
+      cuerpo = formulario("Seguí la consigna de este módulo y entregalo en un único archivo PDF. Jessica lo corrige y acá mismo vas a ver la nota y su devolución.");
+    } else if (e.estado === "devuelta") {
+      cuerpo = `<p><span class="trabajo__estado trabajo__estado--aviso">Con correcciones</span></p>${devolucion}`
+        + formulario(`Corregí tu trabajo y entregá la nueva versión (intento ${(e.intentos || 1) + 1}).`);
+    } else if (e.estado === "entregada") {
+      cuerpo = `<p><span class="trabajo__estado trabajo__estado--revision">Entregado, en revisión</span></p>
+        <p>Entregaste <strong>${esc(e.archivo)}</strong> (${formatoTamano(e.tamano)}) el ${esc(fecha(e.enviada))}. Jessica lo va a corregir y vas a ver acá la nota y su devolución.</p>${descargar}`;
+    } else if (e.estado === "aprobada") {
+      cuerpo = `<p><span class="trabajo__estado trabajo__estado--ok">Aprobado · Nota ${esc(e.nota)} sobre 10</span></p>${devolucion}${descargar}`;
+    } else {
+      const aviso = `Hola Jessica, quiero consultarte por la corrección de mi trabajo final del curso ${c.titulo}.`;
+      cuerpo = `<p><span class="trabajo__estado trabajo__estado--no">Desaprobado · Nota ${esc(e.nota)} sobre 10</span></p>${devolucion}
+        <p>Si querés conversar la corrección o ver cómo seguir, <a href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent(aviso)}" target="_blank" rel="noopener">escribile a Jessica</a>.</p>${descargar}`;
+    }
+  }
+  return `<section class="trabajo" id="trabajo-final"><h2>Trabajo final integrador</h2>${cuerpo}</section>`;
+}
+
+function conectarTrabajo() {
+  const form = app.querySelector("[data-trabajo-form]");
+  if (form) form.addEventListener("submit", enviarTrabajo);
+  app.querySelectorAll("[data-descargar-entrega]").forEach((b) => b.addEventListener("click", () => descargarEntrega(entregaActual(), b)));
+}
+
+function irAlTrabajoFinal() {
+  const ultimo = estado.contenido.length - 1;
+  if (estado.modulo !== ultimo) {
+    estado.modulo = ultimo;
+    pintarCurso();
+  }
+  setTimeout(() => {
+    const seccion = document.getElementById("trabajo-final");
+    if (seccion) seccion.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 150);
+}
+
+// Si Jessica corrige mientras la alumna está leyendo, se actualiza lo que ve (sin perder el lugar de la página).
+function alCambiarEntrega(antes) {
+  const c = estado.cursoAbierto;
+  if (estado.vista !== "curso" || estado.previa || !c || !c.trabajoFinal) return;
+  const ahora = entregaActual() ? entregaActual().estado : null;
+  if (ahora === antes) return;
+  const y = window.scrollY;
+  pintarCurso();
+  window.scrollTo(0, y);
+}
+
+function bytesABase64(bytes) {
+  let binario = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binario += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(binario);
+}
+
+function base64ABytes(base64) {
+  const binario = atob(base64);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  return bytes;
+}
+
+async function enviarTrabajo(evento) {
+  evento.preventDefault();
+  const form = evento.target;
+  const error = form.querySelector("[data-trabajo-error]");
+  const boton = form.querySelector("button[type=submit]");
+  const archivo = form.querySelector("[data-trabajo-archivo]").files[0];
+  error.textContent = "";
+  if (!archivo) { error.textContent = "Elegí el archivo PDF de tu trabajo."; return; }
+  if (!/\.pdf$/i.test(archivo.name)) { error.textContent = "El archivo tiene que ser un PDF (termina en .pdf)."; return; }
+  if (archivo.size > MAX_PDF) {
+    error.textContent = `Tu PDF pesa ${formatoTamano(archivo.size)} y el máximo es ${formatoTamano(MAX_PDF)}. Probá guardarlo como «PDF optimizado» o reducir el tamaño de las imágenes.`;
+    return;
+  }
+  const c = estado.cursoAbierto;
+  const inscripcion = estado.inscripciones.find((i) => i.curso === c.id && i.estado === "aprobada");
+  if (!inscripcion) { error.textContent = "No encontramos tu inscripción aprobada a este curso."; return; }
+
+  boton.disabled = true;
+  boton.textContent = "Entregando…";
+  try {
+    const bytes = new Uint8Array(await archivo.arrayBuffer());
+    // Todo PDF empieza con «%PDF-»: así se detecta un archivo con otra extensión.
+    if (bytes.length < 5 || String.fromCharCode(...bytes.subarray(0, 5)) !== "%PDF-") {
+      error.textContent = "El archivo no parece un PDF válido. Volvé a exportarlo desde tu procesador de texto con «Guardar como PDF».";
+      boton.disabled = false;
+      boton.textContent = "Entregar trabajo";
+      return;
+    }
+    const base64 = bytesABase64(bytes);
+    const partes = [];
+    for (let i = 0; i < base64.length; i += TAMANO_PARTE) partes.push(base64.slice(i, i + TAMANO_PARTE));
+
+    const id = `${estado.usuario.uid}_${c.id}`;
+    const previa = entregaActual();
+    const ref = doc(db, "entregas", id);
+    const datos = {
+      archivo: archivo.name.slice(0, 150),
+      tamano: archivo.size,
+      partes: partes.length,
+      estado: "entregada",
+      enviada: serverTimestamp(),
+      intentos: previa ? (previa.intentos || 1) + 1 : 1,
+    };
+    // Un solo lote: o se guarda todo (el documento y todas las partes) o no se guarda nada.
+    const lote = writeBatch(db);
+    if (previa) lote.update(ref, datos);
+    else lote.set(ref, { uid: estado.usuario.uid, curso: c.id, nombre: inscripcion.nombre, ...datos });
+    partes.forEach((parte, i) => lote.set(doc(db, "entregas", id, "partes", String(i)), { datos: parte }));
+    await lote.commit();
+    mostrarAviso("Entregaste tu trabajo final. Jessica lo va a corregir.");
+  } catch {
+    boton.disabled = false;
+    boton.textContent = "Entregar trabajo";
+    error.textContent = "No pudimos entregar el trabajo. Revisá tu conexión e intentá de nuevo.";
+  }
+}
+
+// Arma el PDF juntando sus partes y lo descarga. Lo usan la alumna (su entrega) y Jessica (la de cada alumna).
+async function descargarEntrega(entrega, boton) {
+  if (!entrega) return;
+  const textoBoton = boton ? boton.textContent : "";
+  if (boton) { boton.disabled = true; boton.textContent = "Preparando…"; }
+  try {
+    const snap = await getDocs(collection(db, "entregas", entrega.id, "partes"));
+    const partes = snap.docs
+      .map((d) => ({ n: Number(d.id), datos: d.data().datos }))
+      .filter((p) => p.n < entrega.partes)
+      .sort((a, b) => a.n - b.n);
+    if (partes.length !== entrega.partes) throw new Error("incompleta");
+    const url = URL.createObjectURL(new Blob([base64ABytes(partes.map((p) => p.datos).join(""))], { type: "application/pdf" }));
+    const enlace = document.createElement("a");
+    enlace.href = url;
+    enlace.download = entrega.archivo || "trabajo-final.pdf";
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch {
+    mostrarAviso("No se pudo descargar el archivo. Probá de nuevo.");
+  } finally {
+    if (boton) { boton.disabled = false; boton.textContent = textoBoton; }
+  }
 }
 
 /* ---------- Opinión del alumno ---------- */
@@ -995,7 +1244,7 @@ async function registrarCertificado(inscripcion) {
 
 async function ventanaCertificado() {
   const c = estado.cursoAbierto;
-  if (!cursoCompleto() && !estado.previa) return;
+  if (!(cursoCompleto() && trabajoFinalOk()) && !estado.previa) return;
   const inscripcion = estado.inscripciones.find((i) => i.curso === c.id);
   // El nombre sale siempre de la inscripción, que la alumna no puede modificar (solo Jessica, desde el panel).
   // Así nadie puede emitirse un certificado a nombre de otra persona.
@@ -1089,6 +1338,14 @@ function escucharAdmin() {
       actualizarNotificaciones();
     }, () => {});
   }
+  if (!cortarEntregas) {
+    cortarEntregas = onSnapshot(query(collection(db, "entregas"), orderBy("enviada", "desc")), (snap) => {
+      estado.entregas = snap.docs.map((d) => ({ id: d.id, ...d.data({ serverTimestamps: "estimate" }) }));
+      cargado.adminEntregas = true;
+      if (estado.vista === "panel" && estado.panelPestana === "trabajos") pintarPanel();
+      actualizarNotificaciones();
+    }, () => { cargado.adminEntregas = true; });
+  }
 }
 
 function abrirPanel() {
@@ -1106,6 +1363,7 @@ function pintarPanel() {
     <div class="panel__pestanas" role="tablist">
       <button type="button" role="tab" data-pestana="solicitudes" aria-selected="${estado.panelPestana === "solicitudes"}">Inscripciones y pagos</button>
       <button type="button" role="tab" data-pestana="clases" aria-selected="${estado.panelPestana === "clases"}">Clases de los cursos</button>
+      <button type="button" role="tab" data-pestana="trabajos" aria-selected="${estado.panelPestana === "trabajos"}">Trabajos finales</button>
       <button type="button" role="tab" data-pestana="opiniones" aria-selected="${estado.panelPestana === "opiniones"}">Opiniones</button>
     </div>`;
   const conectarPestanas = () => app.querySelectorAll("[data-pestana]").forEach((b) => b.addEventListener("click", () => {
@@ -1114,6 +1372,7 @@ function pintarPanel() {
   }));
   if (estado.panelPestana === "clases") { pintarEditor(pestanas); return; }
   if (estado.panelPestana === "opiniones") { pintarOpiniones(pestanas, conectarPestanas); return; }
+  if (estado.panelPestana === "trabajos") { pintarTrabajos(pestanas, conectarPestanas); return; }
 
   const cuenta = (e) => estado.todas.filter((i) => i.estado === e).length;
   const filtros = [
@@ -1143,6 +1402,113 @@ function pintarPanel() {
   app.querySelector("[data-buscar]").addEventListener("input", (e) => { estado.busqueda = e.target.value; pintarListaPanel(); });
   app.querySelector("[data-exportar]").addEventListener("click", exportarInscripciones);
   pintarListaPanel();
+}
+
+/* Trabajos finales: Jessica descarga el PDF, lo corrige y le pone nota. */
+
+const ETIQUETAS_TRABAJO = {
+  entregada: ["Por corregir", "revision"],
+  devuelta: ["Con correcciones", "pendiente"],
+  aprobada: ["Aprobado", "aprobada"],
+  desaprobada: ["Desaprobado", "rechazada"],
+};
+
+function pintarTrabajos(pestanas, conectarPestanas) {
+  const cuenta = (e) => estado.entregas.filter((t) => t.estado === e).length;
+  const filtros = [["entregada", "Por corregir"], ["devuelta", "Con correcciones"], ["aprobada", "Aprobados"], ["desaprobada", "Desaprobados"], ["todas", "Todos"]];
+  const lista = estado.entregas.filter((t) => estado.filtroTrabajos === "todas" || t.estado === estado.filtroTrabajos);
+  const pendientes = cuenta("entregada");
+  app.innerHTML = `
+    <section class="campus__bienvenida">
+      <p class="rotulo">Panel de Jessica</p>
+      <h1>Trabajos finales</h1>
+      <p>${pendientes ? `Tenés <strong>${pendientes}</strong> trabajo${pendientes === 1 ? "" : "s"} para corregir.` : "No hay trabajos para corregir."}
+        Descargá el PDF, corregilo y cargá la nota con tu devolución.</p>
+    </section>
+    ${pestanas}
+    <div class="panel__filtros">
+      ${filtros.map(([v, t]) => `<button type="button" data-filtro-trabajo="${v}" aria-pressed="${estado.filtroTrabajos === v}">${t}${v !== "todas" ? ` <span>${cuenta(v)}</span>` : ""}</button>`).join("")}
+    </div>
+    <div class="panel__lista">
+      ${lista.length ? lista.map((t) => {
+        const c = cursoPorId(t.curso);
+        const [texto, clase] = ETIQUETAS_TRABAJO[t.estado] || ETIQUETAS_TRABAJO.entregada;
+        return `
+        <article class="solicitud solicitud--trabajo">
+          <div class="solicitud__datos">
+            <span class="estado estado--${clase}">${texto}</span>
+            <h3>${esc(t.nombre)}</h3>
+            <p><strong>${esc(c ? c.titulo : t.curso)}</strong></p>
+            <p>${esc(t.archivo)} · ${formatoTamano(t.tamano)} · entregado el ${esc(fecha(t.enviada))}${t.intentos > 1 ? ` · intento ${t.intentos}` : ""}</p>
+            ${t.nota ? `<p class="solicitud__avance">Nota: ${esc(t.nota)} sobre 10</p>` : ""}
+            ${t.devolucion ? `<p>Tu devolución: ${esc(t.devolucion)}</p>` : ""}
+          </div>
+          <div class="solicitud__acciones">
+            <button class="btn btn--chico btn--linea" type="button" data-descargar-trabajo="${esc(t.id)}">Descargar PDF</button>
+            <button class="btn btn--chico" type="button" data-corregir="${esc(t.id)}">${t.estado === "entregada" ? "Corregir" : "Cambiar corrección"}</button>
+          </div>
+        </article>`;
+      }).join("") : `<p class="campus__aviso">No hay trabajos en esta lista.</p>`}
+    </div>`;
+  conectarPestanas();
+  app.querySelectorAll("[data-filtro-trabajo]").forEach((b) => b.addEventListener("click", () => { estado.filtroTrabajos = b.dataset.filtroTrabajo; pintarPanel(); }));
+  app.querySelectorAll("[data-descargar-trabajo]").forEach((b) => b.addEventListener("click", () => descargarEntrega(estado.entregas.find((t) => t.id === b.dataset.descargarTrabajo), b)));
+  app.querySelectorAll("[data-corregir]").forEach((b) => b.addEventListener("click", () => ventanaCorreccion(b.dataset.corregir)));
+}
+
+function ventanaCorreccion(id) {
+  const t = estado.entregas.find((x) => x.id === id);
+  if (!t) return;
+  const c = cursoPorId(t.curso);
+  abrirVentana(`
+    <p class="rotulo">Corregir trabajo final</p>
+    <h2 id="ventana-titulo">${esc(t.nombre)}</h2>
+    <p>${esc(c ? c.titulo : t.curso)} · ${esc(t.archivo)} (${formatoTamano(t.tamano)}). Descargá el PDF antes de corregir.</p>
+    <p><button class="btn btn--chico btn--linea" type="button" data-descargar>Descargar PDF</button></p>
+    <label class="campo"><span>Resultado</span>
+      <select data-resultado>
+        <option value="aprobada">Aprobado</option>
+        <option value="devuelta">Pedir correcciones (la alumna puede volver a entregar)</option>
+        <option value="desaprobada">Desaprobado</option>
+      </select></label>
+    <label class="campo" data-campo-nota><span>Nota (de 1 a 10)</span>
+      <input type="number" min="1" max="10" step="1" data-nota inputmode="numeric" /></label>
+    <label class="campo"><span>Devolución para la alumna</span>
+      <textarea rows="6" maxlength="2000" data-devolucion placeholder="Qué estuvo bien, qué hay que mejorar y cómo seguir."></textarea></label>
+    <p class="acceso__error" role="alert" data-error></p>
+    <div class="programa__pie"><button class="btn" type="button" data-guardar-correccion>Guardar corrección</button></div>`);
+  const resultado = ventanaContenido.querySelector("[data-resultado]");
+  const campoNota = ventanaContenido.querySelector("[data-campo-nota]");
+  const nota = ventanaContenido.querySelector("[data-nota]");
+  const devolucion = ventanaContenido.querySelector("[data-devolucion]");
+  const error = ventanaContenido.querySelector("[data-error]");
+  if (t.estado !== "entregada") {
+    resultado.value = t.estado;
+    if (t.nota) nota.value = t.nota;
+    devolucion.value = t.devolucion || "";
+  }
+  const alternarNota = () => { campoNota.hidden = resultado.value === "devuelta"; };
+  resultado.addEventListener("change", alternarNota);
+  alternarNota();
+  ventanaContenido.querySelector("[data-descargar]").addEventListener("click", (e) => descargarEntrega(t, e.target));
+  ventanaContenido.querySelector("[data-guardar-correccion]").addEventListener("click", async (e) => {
+    error.textContent = "";
+    const valor = Number(nota.value);
+    const texto = devolucion.value.trim();
+    if (resultado.value !== "devuelta" && !(Number.isInteger(valor) && valor >= 1 && valor <= 10)) { error.textContent = "Poné una nota entera del 1 al 10."; return; }
+    if (resultado.value !== "aprobada" && !texto) { error.textContent = "Escribí la devolución: la alumna tiene que saber qué corregir."; return; }
+    e.target.disabled = true;
+    try {
+      await updateDoc(doc(db, "entregas", id), {
+        estado: resultado.value,
+        nota: resultado.value === "devuelta" ? deleteField() : valor,
+        devolucion: texto,
+        calificada: serverTimestamp(),
+      });
+      cerrarVentana();
+      mostrarAviso("Corrección guardada. La alumna recibe un aviso.");
+    } catch { e.target.disabled = false; mostrarAviso("No se pudo guardar. Probá de nuevo."); }
+  });
 }
 
 let cortarOpiniones = null;
@@ -1422,7 +1788,7 @@ async function pintarEditor(pestanas) {
     ${pestanas}
     <div class="editor__barra">
       <label class="campo"><span>Curso</span>
-        <select data-curso>${CURSOS.map((x) => `<option value="${x.id}" ${x.id === c.id ? "selected" : ""}>${esc(x.titulo)}</option>`).join("")}</select></label>
+        <select data-curso>${CURSOS.map((x) => `<option value="${x.id}" ${x.id === c.id ? "selected" : ""}>${esc(x.titulo)}${x.retirado ? " (retirado)" : ""}</option>`).join("")}</select></label>
       <label class="btn btn--chico btn--linea editor__importar">Importar clases (.json)
         <input type="file" accept="application/json,.json" data-importar hidden /></label>
     </div>

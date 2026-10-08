@@ -14,7 +14,12 @@ service cloud.firestore {
     }
 
     function cursoValido(curso) {
-      return curso in ['evaluacion', 'fundamentos', 'lectoescritura', 'orientacion', 'estudio', 'crianza'];
+      return curso in ['evaluacion', 'inclusion', 'infancia', 'fundamentos', 'lectoescritura', 'orientacion', 'estudio', 'crianza'];
+    }
+
+    // Cursos que terminan con un trabajo final entregado en PDF y corregido por Jessica.
+    function tieneTrabajoFinal(curso) {
+      return curso in ['evaluacion', 'inclusion', 'infancia'];
     }
 
     function textoCorto(valor, maximo) {
@@ -107,6 +112,80 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
+    // Trabajo final de los cursos que lo tienen: la alumna entrega un PDF y Jessica lo corrige.
+    // El archivo se guarda partido en trozos de texto (base64) en la subcolección "partes", así no hace falta Storage.
+    // La entrega se hace en un solo lote: el documento y todas las partes juntos.
+    // - La alumna crea su entrega solo con la inscripción aprobada y con el nombre de esa inscripción.
+    // - Solo puede volver a entregar si Jessica pidió correcciones ("devuelta"); no puede tocar la nota.
+    // - Jessica corrige: resultado, nota del 1 al 10 y devolución.
+    match /entregas/{id} {
+      function archivoValido() {
+        return request.resource.data.archivo is string
+          && request.resource.data.archivo.size() > 4
+          && request.resource.data.archivo.size() <= 150
+          && request.resource.data.archivo.lower().matches('.*[.]pdf')
+          && request.resource.data.tamano is int
+          && request.resource.data.tamano > 0 && request.resource.data.tamano <= 3000000
+          && request.resource.data.partes is int
+          && request.resource.data.partes >= 1 && request.resource.data.partes <= 6
+          && request.resource.data.enviada == request.time;
+      }
+
+      allow read: if esAdmin()
+        || (request.auth != null && resource.data.uid == request.auth.uid);
+
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uid', 'curso', 'nombre', 'archivo', 'tamano', 'partes', 'estado', 'enviada', 'intentos'])
+        && request.resource.data.uid == request.auth.uid
+        && cursoValido(request.resource.data.curso)
+        && tieneTrabajoFinal(request.resource.data.curso)
+        && id == request.auth.uid + '_' + request.resource.data.curso
+        && request.resource.data.estado == 'entregada'
+        && request.resource.data.intentos == 1
+        && archivoValido()
+        && get(/databases/$(database)/documents/inscripciones/$(id)).data.estado == 'aprobada'
+        && get(/databases/$(database)/documents/inscripciones/$(id)).data.nombre == request.resource.data.nombre;
+
+      allow update: if (esAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado', 'nota', 'devolucion', 'calificada'])
+          && request.resource.data.estado in ['aprobada', 'desaprobada', 'devuelta']
+          && request.resource.data.calificada == request.time
+          && request.resource.data.devolucion is string
+          && request.resource.data.devolucion.size() <= 2000
+          && (request.resource.data.estado == 'devuelta'
+            || (request.resource.data.nota is int && request.resource.data.nota >= 1 && request.resource.data.nota <= 10)))
+        || (request.auth != null
+          && resource.data.uid == request.auth.uid
+          && resource.data.estado == 'devuelta'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['archivo', 'tamano', 'partes', 'estado', 'enviada', 'intentos'])
+          && request.resource.data.estado == 'entregada'
+          && request.resource.data.intentos == resource.data.intentos + 1
+          && request.resource.data.intentos <= 5
+          && archivoValido());
+
+      allow delete: if esAdmin();
+
+      match /partes/{n} {
+        allow read: if esAdmin()
+          || (request.auth != null && get(/databases/$(database)/documents/entregas/$(id)).data.uid == request.auth.uid);
+
+        // Las partes solo se escriben junto con el documento de la entrega (getAfter mira cómo queda al terminar el lote)
+        // y únicamente en la primera entrega o cuando Jessica pidió correcciones.
+        allow create, update: if request.auth != null
+          && n.matches('^[0-5]$')
+          && request.resource.data.keys().hasOnly(['datos'])
+          && request.resource.data.datos is string
+          && request.resource.data.datos.size() > 0
+          && request.resource.data.datos.size() <= 700000
+          && getAfter(/databases/$(database)/documents/entregas/$(id)).data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/entregas/$(id)).data.estado == 'entregada'
+          && (!exists(/databases/$(database)/documents/entregas/$(id))
+            || get(/databases/$(database)/documents/entregas/$(id)).data.estado == 'devuelta');
+
+        allow delete: if esAdmin();
+      }
+    }
+
     // Certificados emitidos, para poder verificarlos con el código (página verificar.html).
     // Cualquiera que conozca el código puede consultar uno, pero no se pueden listar ni buscar por nombre.
     // Solo guarda lo mínimo: nombre, curso y fecha de emisión (nada de mail ni de pagos).
@@ -124,6 +203,8 @@ service cloud.firestore {
         && codigo.matches('^JB-[A-Z0-9]{5}$')
         && request.resource.data.keys().hasOnly(['nombre', 'curso', 'emitida'])
         && cursoValido(request.resource.data.curso)
+        && (!tieneTrabajoFinal(request.resource.data.curso)
+          || get(/databases/$(database)/documents/entregas/$(request.auth.uid + '_' + request.resource.data.curso)).data.estado == 'aprobada')
         && request.resource.data.emitida == request.time
         && inscripcionPropia(request.resource.data.curso).estado == 'aprobada'
         && inscripcionPropia(request.resource.data.curso).codigo == codigo

@@ -356,6 +356,37 @@
 .autoeval__devolucion { margin: 10px 0 0; font-size: 0.95rem; color: var(--tinta); }
 .autoeval__total { margin: 16px 0 0; font-weight: 600; color: var(--titulo); }
 
+/* Trabajo final */
+.campo[hidden] { display: none; }
+.trabajo {
+  margin-top: 40px;
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--celeste-suave);
+}
+.trabajo h2 { font-size: 1.5rem; margin-bottom: 10px; }
+.trabajo p { margin: 0 0 12px; }
+.trabajo__estado {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: var(--superficie);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.trabajo__estado--ok { background: var(--ok-fondo); color: var(--ok-texto); }
+.trabajo__estado--no { background: var(--error-fondo); color: var(--error-texto); }
+.trabajo__estado--aviso { background: var(--aviso-fondo); color: var(--aviso-texto); }
+.trabajo__devolucion {
+  padding: 14px 18px;
+  border-left: 4px solid var(--dorado);
+  border-radius: 0 12px 12px 0;
+  background: var(--superficie);
+  white-space: pre-wrap;
+}
+.trabajo__form { margin-top: 8px; max-width: 520px; }
+.solicitud--trabajo { grid-template-columns: minmax(0, 1fr) auto; }
+
 /* Certificado */
 .certificado-vista { margin: 8px 0 4px; overflow: hidden; border-radius: 8px; border: 1px solid var(--linea); }
 .certificado-vista .certificado { width: 1100px; transform: scale(var(--escala, 0.58)); transform-origin: top left; margin-bottom: calc(-778px * (1 - var(--escala, 0.58))); }
