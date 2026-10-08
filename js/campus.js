@@ -978,32 +978,30 @@ function ventanaCertificado() {
   const c = estado.cursoAbierto;
   if (!cursoCompleto() && !estado.previa) return;
   const inscripcion = estado.inscripciones.find((i) => i.curso === c.id);
+  // El nombre sale siempre de la inscripción, que la alumna no puede modificar (solo Jessica, desde el panel).
+  // Así nadie puede emitirse un certificado a nombre de otra persona.
+  const nombre = inscripcion ? inscripcion.nombre : "Nombre de la alumna";
+  const codigo = inscripcion ? inscripcion.codigo : "";
+  const mensaje = `Hola Jessica, quiero corregir mi nombre para el certificado del curso ${c.titulo}.${codigo ? ` Mi código es ${codigo}.` : ""}`;
   abrirVentana(`
     <p class="rotulo">Certificado de finalización</p>
     <h2 id="ventana-titulo">${esc(c.titulo)}</h2>
-    <p>Revisá cómo querés que aparezca tu nombre. Después podés imprimirlo o guardarlo como PDF.</p>
-    <label class="campo"><span>Nombre y apellido</span>
-      <input data-nombre maxlength="80" value="${esc(estado.usuario.displayName || "")}" /></label>
+    <p>El certificado se emite a nombre de <strong>${esc(nombre)}</strong>, tal como figura en tu inscripción.
+      ¿Hay un error de escritura? <a href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensaje)}" target="_blank" rel="noopener">Escribile a Jessica</a>
+      y lo corrige. Después podés imprimirlo o guardarlo como PDF.</p>
     <div class="certificado-vista" data-vista></div>
     <div class="programa__pie"><button class="btn" type="button" data-imprimir>Imprimir o guardar en PDF</button></div>`);
-  const input = ventanaContenido.querySelector("[data-nombre]");
-  const vista = ventanaContenido.querySelector("[data-vista]");
-  const pintar = () => {
-    vista.innerHTML = certificadoHtml(input.value.trim() || "Tu nombre", c, inscripcion ? inscripcion.codigo : "");
-  };
-  input.addEventListener("input", pintar);
-  pintar();
+  ventanaContenido.querySelector("[data-vista]").innerHTML = certificadoHtml(nombre, c, codigo);
   ventanaContenido.querySelector("[data-imprimir]").addEventListener("click", () => {
-    if (!input.value.trim()) { input.focus(); return; }
     let hoja = document.getElementById("impresion");
     if (!hoja) {
       hoja = document.createElement("div");
       hoja.id = "impresion";
       document.body.appendChild(hoja);
     }
-    hoja.innerHTML = certificadoHtml(input.value.trim(), c, inscripcion ? inscripcion.codigo : "");
+    hoja.innerHTML = certificadoHtml(nombre, c, codigo);
     const titulo = document.title;
-    document.title = `Certificado - ${c.titulo} - ${input.value.trim()}`;
+    document.title = `Certificado - ${c.titulo} - ${nombre}`;
     window.print();
     document.title = titulo;
   });
@@ -1182,6 +1180,7 @@ function pintarListaPanel() {
       <div class="solicitud__acciones">
         ${i.estado !== "aprobada" ? `<button class="btn btn--chico" type="button" data-aprobar="${esc(i.id)}">Aprobar</button>` : ""}
         ${i.estado !== "rechazada" && i.estado !== "aprobada" ? `<button class="btn btn--chico btn--linea" type="button" data-rechazar="${esc(i.id)}">Rechazar</button>` : ""}
+        <button class="btn btn--chico btn--linea" type="button" data-nombre="${esc(i.id)}">Corregir nombre</button>
       </div>
     </article>`;
   }).join("") : `<p class="campus__aviso">${estado.busqueda.trim() ? "No hay resultados para esa búsqueda." : "No hay inscripciones en esta lista."}</p>`;
@@ -1198,6 +1197,7 @@ function pintarListaPanel() {
     } catch { b.disabled = false; mostrarAviso("No se pudo aprobar. Probá de nuevo."); }
   }));
   contenedor.querySelectorAll("[data-rechazar]").forEach((b) => b.addEventListener("click", () => ventanaRechazo(b.dataset.rechazar)));
+  contenedor.querySelectorAll("[data-nombre]").forEach((b) => b.addEventListener("click", () => ventanaNombre(b.dataset.nombre)));
   cargarProgresos(lista.filter((i) => i.estado === "aprobada"));
 }
 
@@ -1250,6 +1250,31 @@ function exportarInscripciones() {
   enlace.click();
   enlace.remove();
   setTimeout(() => URL.revokeObjectURL(enlace.href), 1000);
+}
+
+// El nombre de la inscripción es el que se imprime en el certificado. Solo Jessica puede corregirlo.
+function ventanaNombre(id) {
+  const i = estado.todas.find((x) => x.id === id);
+  abrirVentana(`
+    <p class="rotulo">Corregir nombre</p>
+    <h2 id="ventana-titulo">${esc(i.nombre)}</h2>
+    <p>Este es el nombre que va a aparecer en el certificado de ${esc(i.email)}. Revisalo con el comprobante y el mail antes de cambiarlo.</p>
+    <label class="campo"><span>Nombre y apellido</span>
+      <input data-nuevo-nombre maxlength="100" value="${esc(i.nombre)}" /></label>
+    <div class="programa__pie"><button class="btn" type="button" data-confirmar>Guardar nombre</button></div>`);
+  const input = ventanaContenido.querySelector("[data-nuevo-nombre]");
+  input.focus();
+  ventanaContenido.querySelector("[data-confirmar]").addEventListener("click", async (e) => {
+    const nombre = input.value.trim().replace(/\s+/g, " ");
+    if (!nombre) { input.focus(); return; }
+    e.target.disabled = true;
+    try {
+      // No se toca "actualizada": así la alumna no recibe un aviso nuevo por este cambio.
+      await updateDoc(doc(db, "inscripciones", id), { nombre });
+      cerrarVentana();
+      mostrarAviso("Nombre actualizado.");
+    } catch { e.target.disabled = false; mostrarAviso("No se pudo guardar. Probá de nuevo."); }
+  });
 }
 
 function ventanaRechazo(id) {
