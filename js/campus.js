@@ -974,7 +974,23 @@ function volverAlEditor() {
 
 /* ---------- Certificado ---------- */
 
-function ventanaCertificado() {
+// Deja registrado el certificado (nombre, curso y fecha) para que se pueda verificar con el código en verificar.html.
+// Si ya estaba registrado se usa ese, así la fecha de emisión es siempre la misma.
+async function registrarCertificado(inscripcion) {
+  const ref = doc(db, "certificados", inscripcion.codigo);
+  const existente = await getDoc(ref);
+  if (existente.exists()) return existente.data();
+  try {
+    await setDoc(ref, { nombre: inscripcion.nombre, curso: inscripcion.curso, emitida: serverTimestamp() });
+  } catch (error) {
+    const otra = await getDoc(ref); // por ejemplo, si se hizo clic dos veces seguidas
+    if (otra.exists()) return otra.data();
+    throw error;
+  }
+  return (await getDoc(ref)).data();
+}
+
+async function ventanaCertificado() {
   const c = estado.cursoAbierto;
   if (!cursoCompleto() && !estado.previa) return;
   const inscripcion = estado.inscripciones.find((i) => i.curso === c.id);
@@ -983,15 +999,26 @@ function ventanaCertificado() {
   const nombre = inscripcion ? inscripcion.nombre : "Nombre de la alumna";
   const codigo = inscripcion ? inscripcion.codigo : "";
   const mensaje = `Hola Jessica, quiero corregir mi nombre para el certificado del curso ${c.titulo}.${codigo ? ` Mi código es ${codigo}.` : ""}`;
-  abrirVentana(`
+  const encabezado = `
     <p class="rotulo">Certificado de finalización</p>
-    <h2 id="ventana-titulo">${esc(c.titulo)}</h2>
+    <h2 id="ventana-titulo">${esc(c.titulo)}</h2>`;
+  let fecha = new Date();
+  if (inscripcion && !estado.previa) {
+    abrirVentana(`${encabezado}<p>Preparando tu certificado…</p>`);
+    try {
+      fecha = (await registrarCertificado(inscripcion)).emitida.toDate();
+    } catch {
+      abrirVentana(`${encabezado}<p>No pudimos registrar tu certificado. Revisá tu conexión y volvé a intentarlo en un rato. Si sigue fallando, escribile a Jessica.</p>`);
+      return;
+    }
+  }
+  abrirVentana(`${encabezado}
     <p>El certificado se emite a nombre de <strong>${esc(nombre)}</strong>, tal como figura en tu inscripción.
       ¿Hay un error de escritura? <a href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent(mensaje)}" target="_blank" rel="noopener">Escribile a Jessica</a>
       y lo corrige. Después podés imprimirlo o guardarlo como PDF.</p>
     <div class="certificado-vista" data-vista></div>
     <div class="programa__pie"><button class="btn" type="button" data-imprimir>Imprimir o guardar en PDF</button></div>`);
-  ventanaContenido.querySelector("[data-vista]").innerHTML = certificadoHtml(nombre, c, codigo);
+  ventanaContenido.querySelector("[data-vista]").innerHTML = certificadoHtml(nombre, c, codigo, fecha);
   ventanaContenido.querySelector("[data-imprimir]").addEventListener("click", () => {
     let hoja = document.getElementById("impresion");
     if (!hoja) {
@@ -999,7 +1026,7 @@ function ventanaCertificado() {
       hoja.id = "impresion";
       document.body.appendChild(hoja);
     }
-    hoja.innerHTML = certificadoHtml(nombre, c, codigo);
+    hoja.innerHTML = certificadoHtml(nombre, c, codigo, fecha);
     const titulo = document.title;
     document.title = `Certificado - ${c.titulo} - ${nombre}`;
     window.print();
@@ -1007,8 +1034,9 @@ function ventanaCertificado() {
   });
 }
 
-function certificadoHtml(nombre, curso, codigo) {
-  const hoy = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+function certificadoHtml(nombre, curso, codigo, fecha) {
+  const hoy = fecha.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+  const enlace = new URL("verificar.html", location.href);
   return `
     <div class="certificado">
       <div class="certificado__borde">
@@ -1023,7 +1051,7 @@ function certificadoHtml(nombre, curso, codigo) {
           <div><span class="certificado__linea"></span>Jessica M. Benitez<br />Psicopedagoga · M.P. 1007</div>
           <div>Posadas, Misiones<br />${esc(hoy)}</div>
         </div>
-        ${codigo ? `<p class="certificado__codigo">Código de verificación: ${esc(codigo)}</p>` : ""}
+        ${codigo ? `<p class="certificado__codigo">Código de verificación: ${esc(codigo)} · Verificalo en ${esc(enlace.host + enlace.pathname)}</p>` : ""}
       </div>
     </div>`;
 }
@@ -1271,8 +1299,14 @@ function ventanaNombre(id) {
     try {
       // No se toca "actualizada": así la alumna no recibe un aviso nuevo por este cambio.
       await updateDoc(doc(db, "inscripciones", id), { nombre });
+      // Si el certificado ya se había emitido, se corrige también el registro que usa la verificación.
+      let avisoFinal = "Nombre actualizado.";
+      try {
+        const registro = doc(db, "certificados", i.codigo);
+        if ((await getDoc(registro)).exists()) await updateDoc(registro, { nombre });
+      } catch { avisoFinal = "Nombre actualizado, pero no se pudo corregir el certificado ya emitido. Probá de nuevo."; }
       cerrarVentana();
-      mostrarAviso("Nombre actualizado.");
+      mostrarAviso(avisoFinal);
     } catch { e.target.disabled = false; mostrarAviso("No se pudo guardar. Probá de nuevo."); }
   });
 }

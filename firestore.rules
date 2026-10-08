@@ -107,6 +107,35 @@ service cloud.firestore {
       allow delete: if esAdmin();
     }
 
+    // Certificados emitidos, para poder verificarlos con el código (página verificar.html).
+    // Cualquiera que conozca el código puede consultar uno, pero no se pueden listar ni buscar por nombre.
+    // Solo guarda lo mínimo: nombre, curso y fecha de emisión (nada de mail ni de pagos).
+    // Lo crea la propia alumna al descargar su certificado, y únicamente si su inscripción está aprobada,
+    // el código es el de esa inscripción y el nombre es el de la inscripción (que ella no puede modificar).
+    match /certificados/{codigo} {
+      function inscripcionPropia(curso) {
+        return get(/databases/$(database)/documents/inscripciones/$(request.auth.uid + '_' + curso)).data;
+      }
+
+      allow get: if true;
+      allow list: if esAdmin();
+
+      allow create: if request.auth != null
+        && codigo.matches('^JB-[A-Z0-9]{5}$')
+        && request.resource.data.keys().hasOnly(['nombre', 'curso', 'emitida'])
+        && cursoValido(request.resource.data.curso)
+        && request.resource.data.emitida == request.time
+        && inscripcionPropia(request.resource.data.curso).estado == 'aprobada'
+        && inscripcionPropia(request.resource.data.curso).codigo == codigo
+        && inscripcionPropia(request.resource.data.curso).nombre == request.resource.data.nombre;
+
+      // Jessica puede corregir el nombre (se hace junto con la corrección de la inscripción) o borrar un certificado.
+      allow update: if esAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
+        && textoCorto(request.resource.data.nombre, 100);
+      allow delete: if esAdmin();
+    }
+
     // Datos de cada cuenta: por ahora, hasta cuándo leyó las notificaciones.
     match /usuarios/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;

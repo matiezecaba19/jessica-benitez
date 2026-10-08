@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Jessica Benitez · Psicopedagoga en Posadas, Misiones</title>
-  <meta name="description" content="Jessica Benitez, psicopedagoga en Posadas, Misiones. Acompañamiento a niños, adolescentes, familias y docentes, talleres y cursos online." />
+  <title>Verificar un certificado · Jessica Benitez, Psicopedagoga</title>
+  <meta name="description" content="Comprobá que un certificado de finalización de los cursos de Jessica Benitez es auténtico ingresando su código de verificación." />
   <link rel="icon" href="assets/favicon.png" type="image/png" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   <meta name="theme-color" content="#1d3557" />
   <script src="js/tema.js"></script>
   <script src="js/pwa.js" defer></script>
-  <link rel="canonical" href="https://matiezecaba19.github.io/jessica-benitez/" />
+  <link rel="canonical" href="https://matiezecaba19.github.io/jessica-benitez/verificar.html" />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="es_AR" />
-  <meta property="og:url" content="https://matiezecaba19.github.io/jessica-benitez/" />
-  <meta property="og:title" content="Jessica Benitez · Psicopedagoga" />
-  <meta property="og:description" content="Acompañamiento en el aprendizaje, orientación vocacional y cursos online. Posadas, Misiones." />
+  <meta property="og:url" content="https://matiezecaba19.github.io/jessica-benitez/verificar.html" />
+  <meta property="og:title" content="Verificar un certificado · Jessica Benitez, Psicopedagoga" />
+  <meta property="og:description" content="Comprobá que un certificado de finalización de los cursos de Jessica Benitez es auténtico ingresando su código de verificación." />
   <meta property="og:image" content="https://matiezecaba19.github.io/jessica-benitez/assets/compartir.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -26,35 +26,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/estilos.css" />
-  <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "ProfessionalService",
-  "name": "Jessica Benitez · Psicopedagoga",
-  "description": "Acompañamiento psicopedagógico a niños, adolescentes, familias y docentes, orientación vocacional, talleres y cursos online.",
-  "url": "https://matiezecaba19.github.io/jessica-benitez/",
-  "image": "https://matiezecaba19.github.io/jessica-benitez/assets/compartir.jpg",
-  "logo": "https://matiezecaba19.github.io/jessica-benitez/assets/logo.png",
-  "telephone": "+54 9 376 460-7696",
-  "email": "psp.jessicabenitez@gmail.com",
-  "address": {
-    "@type": "PostalAddress",
-    "addressLocality": "Posadas",
-    "addressRegion": "Misiones",
-    "addressCountry": "AR"
-  },
-  "areaServed": {
-    "@type": "City",
-    "name": "Posadas"
-  },
-  "openingHours": "Mo-Fr 08:00-12:00",
-  "founder": {
-    "@type": "Person",
-    "name": "Jessica Magalí Benitez",
-    "jobTitle": "Psicopedagoga"
-  }
-}
-  </script>
 </head>
 <body class="pagina">
 
@@ -65,7 +36,7 @@
         <span>Jessica Benitez</span>
       </a>
       <nav class="menu" id="menu" aria-label="Secciones">
-        <a href="index.html" aria-current="page">Inicio</a>
+        <a href="index.html">Inicio</a>
         <a href="servicios.html">Servicios</a>
         <a href="cursos.html">Cursos</a>
         <a href="sobre-mi.html">Sobre mí</a>
@@ -88,109 +59,23 @@
 
   <main>
 
-    <!-- Portada -->
-    <section class="portada">
-      <div class="contenedor portada__grilla">
-        <div class="portada__texto">
-          <p class="rotulo">Psicopedagogía · Posadas, Misiones</p>
-          <h1>Un espacio para <em>acompañar el aprendizaje.</em></h1>
-          <p class="portada__bajada">
-            Esta página reúne los servicios de acompañamiento psicopedagógico para niños, adolescentes,
-            adultos y familias, cómo es una primera consulta y cursos online con campus propio.
-          </p>
-          <div class="acciones">
-            <a class="btn" href="servicios.html">Ver servicios</a>
-            <a class="btn btn--linea" href="cursos.html">Ver cursos online</a>
+    <section class="seccion" id="verificar">
+      <div class="contenedor verificar">
+        <p class="rotulo">Certificados</p>
+        <h1 class="titulo-pagina">Verificar un certificado</h1>
+        <p class="seccion__bajada">Escribí el código que figura al pie del certificado (por ejemplo, <strong>JB-AB12C</strong>) para comprobar que es auténtico y ver a nombre de quién y de qué curso fue emitido.</p>
+
+        <form class="verificar__form" id="verificar-form" novalidate>
+          <label class="verificar__campo" for="codigo">Código del certificado</label>
+          <div class="verificar__fila">
+            <input id="codigo" name="codigo" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="JB-XXXXX" required />
+            <button class="btn" type="submit">Verificar</button>
           </div>
-        </div>
-        <div class="portada__ilustracion">
-          <img src="assets/ilustraciones/aprender.svg" alt="" width="400" height="300" />
-        </div>
-      </div>
-      <div class="contenedor">
-        <p class="rotulo resumen__titulo">Qué hay en esta página</p>
-        <ul class="resumen">
-          <li>
-            <a href="servicios.html">
-              <strong>Servicios</strong>
-              <span>Apoyo escolar, orientación vocacional, técnicas de estudio, talleres y cómo es la primera consulta.</span>
-            </a>
-          </li>
-          <li>
-            <a href="cursos.html">
-              <strong>Cursos online</strong>
-              <span>A tu ritmo, con campus propio, consultas por WhatsApp y certificado al terminar.</span>
-            </a>
-          </li>
-          <li>
-            <a href="campus.html">
-              <strong>Tu perfil en el campus</strong>
-              <span>Inscribite, subí tu comprobante de pago y cursá desde tu cuenta.</span>
-            </a>
-          </li>
-          <li>
-            <a href="contacto.html">
-              <strong>Preguntas y contacto</strong>
-              <span>Dudas frecuentes, WhatsApp, mail y horarios para pedir una primera entrevista.</span>
-            </a>
-          </li>
-        </ul>
-      </div>
-    </section>
+        </form>
 
-    <!-- Servicios (resumen) -->
-    <section class="seccion seccion--celeste" id="servicios">
-      <div class="contenedor">
-        <p class="rotulo">Servicios</p>
-        <h2>Áreas de acompañamiento</h2>
-        <ul class="etiquetas">
-          <li>Apoyo escolar</li>
-          <li>Orientación vocacional</li>
-          <li>Lectoescritura y cálculo</li>
-          <li>Técnicas de estudio</li>
-          <li>Habilidades socioemocionales</li>
-          <li>Asesoramiento a familias y docentes</li>
-          <li>Talleres</li>
-        </ul>
-        <a class="btn" href="servicios.html">Ver todos los servicios</a>
-      </div>
-    </section>
+        <div class="verificar__resultado" id="resultado" role="status" aria-live="polite" hidden></div>
 
-    <!-- Primera consulta (resumen) -->
-    <section class="seccion" id="primera-consulta">
-      <div class="contenedor">
-        <p class="rotulo">Primera consulta</p>
-        <h2>Cómo empieza el acompañamiento</h2>
-        <ol class="proceso">
-          <li>
-            <h3>Entrevista inicial</h3>
-            <p>Conocer el motivo de consulta y la historia.</p>
-          </li>
-          <li>
-            <h3>Evaluación</h3>
-            <p>Actividades y observación para ver cómo se aprende.</p>
-          </li>
-          <li>
-            <h3>Devolución y plan</h3>
-            <p>Armar juntos objetivos claros.</p>
-          </li>
-          <li>
-            <h3>Acompañamiento</h3>
-            <p>Sesiones periódicas y revisión de los avances.</p>
-          </li>
-        </ol>
-        <a class="btn btn--linea" href="servicios.html#como-trabajo">Ver cómo es cada paso</a>
-      </div>
-    </section>
-
-    <!-- Consejo -->
-    <section class="consejo">
-      <div class="contenedor">
-        <p class="rotulo rotulo--claro">El consejo del día</p>
-        <blockquote id="consejo">
-          Celebrar el proceso —el intento, la estrategia— y no solo el resultado ayuda a sostener
-          la motivación frente a una dificultad de aprendizaje.
-        </blockquote>
+        <p class="verificar__nota">Los certificados de este sitio acreditan la participación en una capacitación privada y no constituyen un título oficial.</p>
       </div>
     </section>
 
@@ -238,7 +123,9 @@
     <svg viewBox="0 0 24 24" width="30" height="30" aria-hidden="true"><path fill="currentColor" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.2h.01c5.46 0 9.91-4.45 9.91-9.91A9.85 9.85 0 0 0 12.04 2Zm0 18.15h-.01a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.23 8.23 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24a8.2 8.2 0 0 1 8.24 8.25c0 4.54-3.7 8.23-8.24 8.23Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.15.17-.25.25-.42.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.16-.48-.29Z"/></svg>
   </a>
 
+  <script src="js/datos-cursos.js"></script>
   <script src="js/sitio.js"></script>
+  <script type="module" src="js/verificar.js"></script>
   <script src="js/estadisticas.js"></script>
 </body>
 </html>

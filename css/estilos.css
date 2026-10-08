@@ -796,6 +796,43 @@ body.pagina > main { flex: 1; }
   text-underline-offset: 8px;
 }
 
+/* Verificación de certificados */
+.verificar { max-width: 720px; margin-inline: auto; }
+.verificar__form { margin: 28px 0; }
+.verificar__campo { display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: var(--titulo); }
+.verificar__fila { display: flex; flex-wrap: wrap; gap: 12px; }
+.verificar__fila input {
+  flex: 1 1 220px;
+  padding: 12px 16px;
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--tinta);
+  font: inherit;
+  font-size: 1.1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.verificar__fila input:focus { outline: 3px solid var(--celeste); border-color: var(--enlace); }
+.verificar__resultado {
+  margin-top: 8px;
+  padding: 24px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+.verificar__resultado h2 { font-size: 1.6rem; margin-bottom: 12px; }
+.verificar__resultado p { margin: 0 0 8px; }
+.verificar__resultado--ok { border-color: var(--verde); box-shadow: inset 4px 0 0 var(--verde); }
+.verificar__resultado--no, .verificar__resultado--error { border-color: var(--error-linea); box-shadow: inset 4px 0 0 var(--error-linea); }
+.verificar__resultado--no .rotulo, .verificar__resultado--error .rotulo { color: var(--error-linea); }
+.verificar__datos { margin: 16px 0; display: grid; gap: 12px; }
+.verificar__datos div { display: grid; gap: 2px; }
+.verificar__datos dt { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tinta-tenue); }
+.verificar__datos dd { margin: 0; font-weight: 500; }
+.verificar__aviso, .verificar__nota { color: var(--tinta-tenue); font-size: 0.9rem; }
+.verificar__nota { margin-top: 28px; }
+
 /* Resumen de servicios del inicio */
 .etiquetas {
   list-style: none;
