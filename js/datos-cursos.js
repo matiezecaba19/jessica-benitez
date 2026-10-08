@@ -61,13 +61,15 @@ window.DATOS_CURSOS = (function () {
     {
       titulo: "Educación Inclusiva y Trayectorias Escolares: Apoyos, Diseño Universal y Trabajo con Equipos Docentes",
       id: "inclusion",
-      // Inscripción cerrada hasta definir el precio (y, si lo tiene, el aval). Para abrirla: borrar esta línea y completar el precio.
-      proximamente: true,
+      tipo: "Curso de extensión",
+      // Completar con el número de la resolución del aval; mientras esté vacío no se muestra.
+      aval: "Con aval de la Universidad Nacional de Misiones (UNaM)",
+      resolucion: "",
       horas: 113,
       trabajoFinal: true,
       para: "Psicopedagogas y psicopedagogos recibidos",
       resumen: "Para acompañar procesos de inclusión en la escuela: marco normativo, trayectorias escolares, Diseño Universal para el Aprendizaje, configuraciones de apoyo y proyectos pedagógicos individuales, evaluación inclusiva y trabajo con equipos docentes y familias.",
-      precio: "A confirmar",
+      precio: "$ 50.000",
       semanas: 14,
       objetivos: [
         "Fundamentar las intervenciones en el modelo social de la discapacidad y en la normativa internacional, nacional y provincial.",
@@ -98,13 +100,15 @@ window.DATOS_CURSOS = (function () {
     {
       titulo: "Psicopedagogía en la Primera Infancia: Desarrollo, Detección Temprana y Estimulación",
       id: "infancia",
-      // Inscripción cerrada hasta definir el precio (y, si lo tiene, el aval). Para abrirla: borrar esta línea y completar el precio.
-      proximamente: true,
+      tipo: "Curso de extensión",
+      // Completar con el número de la resolución del aval; mientras esté vacío no se muestra.
+      aval: "Con aval de la Universidad Nacional de Misiones (UNaM)",
+      resolucion: "",
       horas: 113,
       trabajoFinal: true,
       para: "Psicopedagogas y psicopedagogos recibidos",
       resumen: "Para trabajar con niñas y niños de 0 a 6 años, sus familias y los jardines: desarrollo por áreas, señales de alerta y detección temprana, evaluación en el nivel inicial, intervención centrada en la familia, transición a la primaria y trabajo interdisciplinario.",
-      precio: "A confirmar",
+      precio: "$ 50.000",
       semanas: 14,
       objetivos: [
         "Reconocer el desarrollo esperable de 0 a 6 años en las áreas motora, comunicativa, cognitiva y socioemocional, y el lugar del juego.",
