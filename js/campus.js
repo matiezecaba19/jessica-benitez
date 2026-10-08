@@ -13,7 +13,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const { CURSOS, ALIAS, WHATSAPP } = window.DATOS_CURSOS;
+const { CURSOS, ALIAS, WHATSAPP, duracion } = window.DATOS_CURSOS;
 // Solo cambia lo que se muestra; quién es administrador lo deciden las reglas.
 const ADMINS = ["psp.jessicabenitez@gmail.com", "matiezecaba19@gmail.com"];
 
@@ -542,8 +542,10 @@ function pintarInicio() {
             <div class="campus__curso-cuerpo">
               <p class="curso__para">${esc(c.para)}</p>
               <h3>${esc(c.titulo)}</h3>
-              <p class="campus__detalle">${c.modulos.length} módulos · ${c.semanas} semanas · <strong>${esc(c.precio)}</strong></p>
-              <button class="btn btn--chico" type="button" data-inscribir="${c.id}">Inscribirme</button>
+              <p class="campus__detalle">${esc(duracion(c))} · <strong>${c.proximamente ? "Próximamente" : esc(c.precio)}</strong></p>
+              ${c.proximamente
+                ? `<a class="btn btn--chico btn--linea" href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola Jessica, quiero consultarte por el curso ${c.titulo}.`)}" target="_blank" rel="noopener">Consultar</a>`
+                : `<button class="btn btn--chico" type="button" data-inscribir="${c.id}">Inscribirme</button>`}
             </div>
           </article>`).join("")}
       </div>
@@ -577,6 +579,7 @@ function accionInscripcion(i) {
 function confirmarInscripcion(cursoId) {
   const c = cursoPorId(cursoId);
   if (!c) return;
+  if (c.proximamente) { mostrarAviso("La inscripción a este curso todavía no está abierta."); return; }
   abrirVentana(`
     <img class="programa__ilustracion" src="assets/ilustraciones/cursos/${c.id}.svg" alt="" width="400" height="200" />
     <p class="rotulo">Inscripción</p>
@@ -584,7 +587,7 @@ function confirmarInscripcion(cursoId) {
     <p class="programa__resumen">${esc(c.resumen)}</p>
     <dl class="programa__datos">
       <div><dt>Valor</dt><dd>${esc(c.precio)}</dd></div>
-      <div><dt>Duración</dt><dd>${c.semanas} semanas · ${c.modulos.length} módulos</dd></div>
+      <div><dt>Duración</dt><dd>${esc(duracion(c))}</dd></div>
     </dl>
     <h3>Cómo sigue</h3>
     <ol class="programa__lista">
@@ -1052,7 +1055,7 @@ function certificadoHtml(nombre, curso, codigo, fecha) {
         <p class="certificado__nombre">${esc(nombre)}</p>
         <p class="certificado__texto">completó el curso online</p>
         <p class="certificado__curso">${esc(curso.titulo)}</p>
-        <p class="certificado__detalle">${curso.modulos.length} módulos · ${curso.semanas} semanas de cursada</p>
+        <p class="certificado__detalle">${esc(duracion(curso))} de cursada</p>
         <div class="certificado__pie">
           <div><span class="certificado__linea"></span>Jessica M. Benitez<br />Psicopedagoga · M.P. 1007</div>
           <div>Posadas, Misiones<br />${esc(hoy)}</div>

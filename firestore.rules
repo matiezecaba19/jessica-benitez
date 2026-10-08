@@ -14,7 +14,7 @@ service cloud.firestore {
     }
 
     function cursoValido(curso) {
-      return curso in ['fundamentos', 'lectoescritura', 'orientacion', 'estudio', 'crianza'];
+      return curso in ['evaluacion', 'fundamentos', 'lectoescritura', 'orientacion', 'estudio', 'crianza'];
     }
 
     function textoCorto(valor, maximo) {

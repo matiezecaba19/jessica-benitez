@@ -2,7 +2,7 @@
    cada certificado (nombre, curso y fecha). Se puede consultar solo si se conoce el código. */
 import { firebaseConfig } from "./firebase-config.js";
 
-const { CURSOS = [], WHATSAPP = "" } = window.DATOS_CURSOS || {};
+const { CURSOS = [], WHATSAPP = "", duracion = () => "" } = window.DATOS_CURSOS || {};
 
 const formulario = document.getElementById("verificar-form");
 const campo = document.getElementById("codigo");
@@ -68,7 +68,7 @@ async function verificar(codigo) {
       <h2>${esc(d.nombre)}</h2>
       <dl class="verificar__datos">
         <div><dt>Completó el curso</dt><dd>${esc(curso ? curso.titulo : d.curso)}</dd></div>
-        ${curso ? `<div><dt>Duración</dt><dd>${curso.modulos.length} módulos · ${curso.semanas} semanas</dd></div>` : ""}
+        ${curso ? `<div><dt>Duración</dt><dd>${esc(duracion(curso))}</dd></div>` : ""}
         ${fecha ? `<div><dt>Fecha de emisión</dt><dd>${esc(fecha)}</dd></div>` : ""}
         <div><dt>Código</dt><dd>${esc(codigo)}</dd></div>
         <div><dt>Emitido por</dt><dd>Jessica M. Benitez · Psicopedagoga · M.P. 1007</dd></div>

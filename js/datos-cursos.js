@@ -14,6 +14,48 @@ window.DATOS_CURSOS = (function () {
 
   const CURSOS = [
     {
+      titulo: "Evaluación e Intervención Psicopedagógica Avanzada",
+      id: "evaluacion",
+      tipo: "Curso de extensión",
+      // Completar con el número de la resolución del aval; mientras esté vacío no se muestra.
+      aval: "Con aval de la Universidad Nacional de Misiones (UNaM)",
+      resolucion: "",
+      // Para cerrar temporalmente la inscripción (se muestra el curso, pero sin precio ni botón de inscripción),
+      // agregar acá la línea:  proximamente: true,
+      horas: 136,
+      para: "Psicopedagogas y psicopedagogos recibidos",
+      resumen: "Formación avanzada para quienes ya se recibieron: razonamiento clínico, marco ético y legal, evaluación de la lectura, la escritura, la matemática y las funciones ejecutivas, informes y devoluciones, intervención basada en la evidencia y trabajo con escuelas y familias.",
+      precio: "$ 60.000",
+      semanas: 16,
+      objetivos: [
+        "Formular y poner a prueba hipótesis con razonamiento clínico, reconociendo y reduciendo los sesgos.",
+        "Planificar la evaluación de la lectura, la escritura, la matemática, la atención y los aspectos emocionales, y llegar a un diagnóstico diferencial con su grado de certeza.",
+        "Redactar informes y conducir devoluciones adecuadas a cada destinatario, con criterios éticos y normativos.",
+        "Diseñar, implementar y evaluar intervenciones basadas en la evidencia, en trabajo con escuelas, familias y otros profesionales.",
+      ],
+      incluye: [
+        "Material de estudio de cada módulo, con casos para analizar",
+        "Actividades prácticas y autoevaluación en cada módulo",
+        "Trabajo final integrador",
+        "Consultas con Jessica por WhatsApp o mail",
+        "Constancia de finalización en el campus",
+      ],
+      modulos: [
+        { titulo: "Razonamiento clínico y encuadre profesional", temas: ["Del motivo de consulta a la hipótesis", "Sesgos del razonamiento y cómo reducirlos", "Formulación del caso y encuadre profesional"] },
+        { titulo: "Marco normativo y ético del ejercicio profesional", temas: ["Normas de educación, niñez, discapacidad, salud mental y datos personales", "Principios éticos y límites de la confidencialidad", "Registros, informes y datos sensibles"] },
+        { titulo: "Neurodesarrollo y bases para la evaluación", temas: ["Lenguaje, atención, memoria y funciones ejecutivas", "Hitos del desarrollo y marcos diagnósticos (DSM-5-TR y CIE-11)", "Qué modifica la interpretación de una evaluación"] },
+        { titulo: "Evaluación de la lectura y la escritura", temas: ["Modelo simple de lectura y perfiles", "Componentes a evaluar y particularidades del español", "Análisis de errores y producción escrita"] },
+        { titulo: "Evaluación del pensamiento matemático", temas: ["Sentido numérico, conteo y valor posicional", "Cálculo, resolución de problemas y análisis de errores", "Discalculia y ansiedad matemática"] },
+        { titulo: "Atención, funciones ejecutivas y autorregulación", temas: ["Atención y funciones ejecutivas", "Evaluación desde la psicopedagogía y rol frente al TDAH", "Apoyos de entorno y enseñanza de estrategias"] },
+        { titulo: "Emoción, motivación y contexto en el aprendizaje", temas: ["Autoeficacia, autodeterminación y atribuciones", "Ansiedad, estrés y adversidad", "Qué se trabaja y cuándo derivar"] },
+        { titulo: "Integración de resultados y diagnóstico diferencial", temas: ["Triangulación de la información", "Diagnóstico diferencial y comorbilidad", "Prevalencia, sobrediagnóstico y grado de certeza"] },
+        { titulo: "El informe psicopedagógico y la devolución", temas: ["Estructura y redacción del informe", "Mensajes para la familia, la escuela y otros profesionales", "La devolución como intervención"] },
+        { titulo: "Diseño de la intervención basada en la evidencia", temas: ["Objetivos medibles y niveles de apoyo", "Enseñanza explícita y estrategias por área", "Planificación de sesiones, generalización y retirada del apoyo"] },
+        { titulo: "Trabajo con escuelas y familias: inclusión y trabajo interdisciplinario", temas: ["Colaboración con la escuela y diseño universal para el aprendizaje", "Adaptaciones, apoyos y trabajo con otros profesionales", "La familia como aliada"] },
+        { titulo: "Seguimiento, evaluación de resultados y trabajo final integrador", temas: ["Medición del progreso y diseños de caso único", "Ajustar, dar el alta o derivar", "Práctica reflexiva y trabajo final integrador"] },
+      ],
+    },
+    {
       titulo: "Fundamentos de la Psicopedagogía",
       id: "fundamentos",
       para: "Estudiantes, docentes y profesionales afines",
@@ -116,5 +158,10 @@ window.DATOS_CURSOS = (function () {
     },
   ];
 
-  return { WHATSAPP, ALIAS, INCLUYE, CURSOS };
+  // «12 módulos · 136 horas · 16 semanas» (las horas solo aparecen si el curso las tiene definidas).
+  function duracion(curso) {
+    return `${curso.modulos.length} módulos${curso.horas ? ` · ${curso.horas} horas` : ""} · ${curso.semanas} semanas`;
+  }
+
+  return { WHATSAPP, ALIAS, INCLUYE, CURSOS, duracion };
 })();

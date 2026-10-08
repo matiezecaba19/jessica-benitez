@@ -406,6 +406,11 @@ h3 { font-size: 1.35rem; }
   font-weight: 500;
   color: var(--enlace);
 }
+.curso > .curso__aval {
+  font-size: 0.85rem;
+  color: var(--enlace);
+  margin: 0 0 8px;
+}
 .curso__pie {
   margin-top: auto;
   display: flex;
