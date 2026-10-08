@@ -215,21 +215,30 @@
 .campus__detalle a { font-weight: 600; }
 
 /* Lector */
+/* Al leer un curso, la página usa todo el ancho: la lista de módulos queda compacta contra la esquina
+   izquierda y la clase ocupa el resto. */
+.campus__main:has(.lector) {
+  max-width: none;
+  margin: 0;
+  padding-left: clamp(12px, 1.5vw, 24px);
+  padding-right: clamp(12px, 2vw, 32px);
+}
 .lector {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  gap: 40px;
+  grid-template-columns: 240px minmax(0, 1100px);
+  justify-content: start;
+  gap: 24px;
   align-items: start;
 }
 .lector__indice {
   position: sticky;
   top: 92px;
-  padding: 22px;
+  padding: 18px 14px;
   border: 1px solid var(--linea);
   border-radius: var(--radio);
   background: var(--superficie);
 }
-.lector__indice h2 { font-size: 1.2rem; margin-bottom: 8px; }
+.lector__indice h2 { font-size: 1.05rem; margin-bottom: 8px; }
 .lector__volver {
   border: 0;
   background: none;
@@ -248,8 +257,8 @@
   width: 100%;
   text-align: left;
   font: inherit;
-  font-size: 0.92rem;
-  padding: 10px 12px 10px 34px;
+  font-size: 0.88rem;
+  padding: 9px 10px 9px 32px;
   border: 0;
   border-radius: 10px;
   background: transparent;
