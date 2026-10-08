@@ -51,6 +51,14 @@ async function verificar(codigo) {
     }
 
     const d = snap.data();
+    if (d.retirado === true) {
+      // No se muestran datos de la persona: el certificado ya no tiene validez.
+      mostrar("no", `
+        <p class="rotulo">Certificado retirado</p>
+        <h2>Este certificado ya no es válido</h2>
+        <p>Fue retirado y no tiene validez.${enlaceConsulta(codigo)}</p>`);
+      return;
+    }
     const curso = CURSOS.find((c) => c.id === d.curso);
     const fecha = d.emitida && d.emitida.toDate
       ? d.emitida.toDate().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })

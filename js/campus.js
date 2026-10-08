@@ -8,7 +8,7 @@ import {
   sendPasswordResetEmail, signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, connectFirestoreEmulator, doc, getDoc, setDoc, updateDoc, collection,
+  getFirestore, connectFirestoreEmulator, doc, getDoc, getDocs, setDoc, updateDoc, collection,
   query, where, orderBy, onSnapshot, serverTimestamp, writeBatch,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -1006,7 +1006,13 @@ async function ventanaCertificado() {
   if (inscripcion && !estado.previa) {
     abrirVentana(`${encabezado}<p>Preparando tu certificado…</p>`);
     try {
-      fecha = (await registrarCertificado(inscripcion)).emitida.toDate();
+      const registro = await registrarCertificado(inscripcion);
+      if (registro.retirado === true) {
+        abrirVentana(`${encabezado}<p>Este certificado fue retirado y no se puede descargar. Si creés que es un error,
+          <a href="https://wa.me/${WHATSAPP}?text=${encodeURIComponent(`Hola Jessica, quiero consultar por mi certificado del curso ${c.titulo}. Mi código es ${codigo}.`)}" target="_blank" rel="noopener">escribile a Jessica</a>.</p>`);
+        return;
+      }
+      fecha = registro.emitida.toDate();
     } catch {
       abrirVentana(`${encabezado}<p>No pudimos registrar tu certificado. Revisá tu conexión y volvé a intentarlo en un rato. Si sigue fallando, escribile a Jessica.</p>`);
       return;
@@ -1202,6 +1208,7 @@ function pintarListaPanel() {
         <p>Código <strong>${esc(i.codigo)}</strong> · ${esc(fecha(i.actualizada))}</p>
         ${i.nota ? `<p class="solicitud__nota">Nota: ${esc(i.nota)}</p>` : ""}
         ${i.estado === "aprobada" ? `<p class="solicitud__avance">${textoAvance(i)}</p>` : ""}
+        ${textoCertificado(i)}
       </div>
       ${tieneImagen ? `<button class="solicitud__comprobante" type="button" data-ver="${esc(i.id)}"><img src="${i.comprobante}" alt="Comprobante de ${esc(i.nombre)}" /></button>`
         : `<p class="solicitud__sin">Sin comprobante</p>`}
@@ -1209,6 +1216,7 @@ function pintarListaPanel() {
         ${i.estado !== "aprobada" ? `<button class="btn btn--chico" type="button" data-aprobar="${esc(i.id)}">Aprobar</button>` : ""}
         ${i.estado !== "rechazada" && i.estado !== "aprobada" ? `<button class="btn btn--chico btn--linea" type="button" data-rechazar="${esc(i.id)}">Rechazar</button>` : ""}
         <button class="btn btn--chico btn--linea" type="button" data-nombre="${esc(i.id)}">Corregir nombre</button>
+        ${certificados[i.codigo] ? `<button class="btn btn--chico btn--linea" type="button" data-cert-estado="${esc(i.id)}">${certificados[i.codigo].retirado ? "Restituir certificado" : "Retirar certificado"}</button>` : ""}
       </div>
     </article>`;
   }).join("") : `<p class="campus__aviso">${estado.busqueda.trim() ? "No hay resultados para esa búsqueda." : "No hay inscripciones en esta lista."}</p>`;
@@ -1226,7 +1234,59 @@ function pintarListaPanel() {
   }));
   contenedor.querySelectorAll("[data-rechazar]").forEach((b) => b.addEventListener("click", () => ventanaRechazo(b.dataset.rechazar)));
   contenedor.querySelectorAll("[data-nombre]").forEach((b) => b.addEventListener("click", () => ventanaNombre(b.dataset.nombre)));
+  contenedor.querySelectorAll("[data-cert-estado]").forEach((b) => b.addEventListener("click", () => ventanaRetiro(b.dataset.certEstado)));
   cargarProgresos(lista.filter((i) => i.estado === "aprobada"));
+  cargarCertificados();
+}
+
+/* Certificados emitidos (se leen todos juntos, como mucho una vez cada 30 segundos mientras el panel está abierto). */
+const certificados = {};
+let certificadosLeidos = 0;
+
+async function cargarCertificados(forzar = false) {
+  if (!forzar && Date.now() - certificadosLeidos < 30000) return;
+  certificadosLeidos = Date.now();
+  try {
+    const snap = await getDocs(collection(db, "certificados"));
+    const antes = JSON.stringify(certificados);
+    Object.keys(certificados).forEach((k) => delete certificados[k]);
+    snap.forEach((d) => { certificados[d.id] = d.data(); });
+    if (JSON.stringify(certificados) !== antes) pintarListaPanel();
+  } catch { /* si falla, se vuelve a intentar en 30 segundos */ }
+}
+
+function textoCertificado(i) {
+  const c = certificados[i.codigo];
+  if (!c) return "";
+  return c.retirado
+    ? `<p class="solicitud__nota">Certificado retirado: ya no es válido.</p>`
+    : `<p class="solicitud__avance">🎓 Certificado emitido · ${esc(fecha(c.emitida))}</p>`;
+}
+
+// Retirar un certificado no lo borra: queda marcado, la verificación dice que ya no es válido y la alumna
+// no puede volver a descargarlo. Se puede restituir cuando se quiera.
+function ventanaRetiro(id) {
+  const i = estado.todas.find((x) => x.id === id);
+  const c = i && certificados[i.codigo];
+  if (!c) return;
+  const retirar = !c.retirado;
+  abrirVentana(`
+    <p class="rotulo">${retirar ? "Retirar certificado" : "Restituir certificado"}</p>
+    <h2 id="ventana-titulo">${esc(i.nombre)} · ${esc(i.codigo)}</h2>
+    <p>${retirar
+      ? "Al retirarlo, la página de verificación va a decir que este certificado ya no es válido y la alumna no va a poder volver a descargarlo. No se borra: podés restituirlo cuando quieras."
+      : "Al restituirlo, el certificado vuelve a ser válido en la página de verificación y la alumna puede descargarlo de nuevo."}</p>
+    <div class="programa__pie"><button class="btn" type="button" data-confirmar>${retirar ? "Retirar certificado" : "Restituir certificado"}</button></div>`);
+  ventanaContenido.querySelector("[data-confirmar]").addEventListener("click", async (e) => {
+    e.target.disabled = true;
+    try {
+      await updateDoc(doc(db, "certificados", i.codigo), { retirado: retirar });
+      certificados[i.codigo] = { ...c, retirado: retirar };
+      cerrarVentana();
+      mostrarAviso(retirar ? "Certificado retirado." : "Certificado restituido.");
+      pintarListaPanel();
+    } catch { e.target.disabled = false; mostrarAviso("No se pudo cambiar. Probá de nuevo."); }
+  });
 }
 
 /* Avance de cada alumno aprobado (se lee una vez y queda guardado mientras el panel está abierto). */

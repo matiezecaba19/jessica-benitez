@@ -129,10 +129,13 @@ service cloud.firestore {
         && inscripcionPropia(request.resource.data.curso).codigo == codigo
         && inscripcionPropia(request.resource.data.curso).nombre == request.resource.data.nombre;
 
-      // Jessica puede corregir el nombre (se hace junto con la corrección de la inscripción) o borrar un certificado.
+      // Jessica puede corregir el nombre (se hace junto con la corrección de la inscripción) y retirar o restituir
+      // un certificado ("retirado"): si está retirado, la verificación dice que ya no es válido y la alumna no puede
+      // volver a descargarlo. También puede borrarlo.
       allow update: if esAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
-        && textoCorto(request.resource.data.nombre, 100);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'retirado'])
+        && textoCorto(request.resource.data.nombre, 100)
+        && (!('retirado' in request.resource.data) || request.resource.data.retirado is bool);
       allow delete: if esAdmin();
     }
 
