@@ -33,5 +33,6 @@
     "Celebrar el proceso —el intento, la estrategia— y no solo el resultado ayuda a sostener la motivación frente a una dificultad de aprendizaje.",
   ];
   const dia = Math.floor(Date.now() / 86400000);
-  document.getElementById("consejo").textContent = CONSEJOS[dia % CONSEJOS.length];
+  const consejo = document.getElementById("consejo"); // solo está en el inicio
+  if (consejo) consejo.textContent = CONSEJOS[dia % CONSEJOS.length];
 })();

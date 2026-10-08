@@ -5,7 +5,12 @@ HTML, CSS y JavaScript sin dependencias ni compilación. Se publica con GitHub P
 
 ## Archivos
 
-- `index.html`: la landing (portada, sobre mí, servicios, cómo trabajo, cursos, preguntas y contacto).
+- Cinco páginas con el mismo encabezado y pie: `index.html` (inicio: qué es la página, resumen de servicios y de la primera
+  consulta), `servicios.html` (servicios y cómo trabajo), `cursos.html` (con las opiniones), `sobre-mi.html` y `contacto.html`
+  (contacto y preguntas frecuentes). Si cambia el menú o el pie, hay que cambiarlo en cada una. También están
+  `privacidad.html` y `404.html`.
+- `js/tema.js`: modo claro y oscuro (el botón del encabezado). `js/pwa.js`, `sw.js` y `manifest.webmanifest`: permiten
+  instalar la página como app.
 - `campus.html`: el campus: cuentas, inscripción con pago por transferencia, lector de clases y panel de Jessica.
 - `css/estilos.css` y `css/campus.css`: estilos con la paleta de la marca.
 - `js/datos-cursos.js`: los cursos (programa, precio, alias de pago). Lo usan la landing y el campus.

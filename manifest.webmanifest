@@ -1,0 +1,33 @@
+{
+  "name": "Campus · Jessica Benitez, Psicopedagoga",
+  "short_name": "Campus JB",
+  "description": "Cursos online y consultas con Jessica Benitez, psicopedagoga en Posadas, Misiones.",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "start_url": "./campus.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdfcf9",
+  "theme_color": "#1d3557",
+  "categories": ["education"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mis cursos",
+      "short_name": "Cursos",
+      "url": "./campus.html",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Inicio",
+      "short_name": "Inicio",
+      "url": "./index.html",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
